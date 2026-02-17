@@ -746,47 +746,92 @@
         async function init() {
             try {
                 showLoading(true);
-                await loadData();
+                
+                // Charger les données de référence d'abord
                 await loadDirections();
                 await loadServices();
+                
+                console.log('Directions loaded:', allDirections.length);
+                console.log('Services loaded:', allServices.length);
+                
+                // Puis charger les données principales
+                await loadData();
+                
                 showLoading(false);
                 updateStats();
             } catch (error) {
                 console.error('Erreur lors de l\'initialisation:', error);
                 showLoading(false);
+                alert('Erreur lors du chargement. Veuillez actualiser la page.');
             }
         }
 
         // Charger toutes les données de QUOTIDIEN
         async function loadData() {
             try {
-                const table = await grist.getTable('QUOTIDIEN');
-                const records = await grist.docApi.fetchTable('QUOTIDIEN');
-                currentData = records;
+                const table = await grist.docApi.fetchTable('QUOTIDIEN');
+                // Transformer les données en format utilisable
+                currentData = [];
+                if (table.id && table.id.length > 0) {
+                    for (let i = 0; i < table.id.length; i++) {
+                        currentData.push({
+                            id: table.id[i],
+                            date_demande: table.date_demande[i],
+                            date_reponse: table.date_reponse[i],
+                            date_charge: table.date_charge[i],
+                            direction: table.direction[i],
+                            service: table.service[i],
+                            statut: table.statut[i],
+                            nom: table.nom[i],
+                            sujet: table.sujet[i],
+                            delai: table.delai[i],
+                            mail: table.mail[i]
+                        });
+                    }
+                }
                 renderTable();
             } catch (error) {
                 console.error('Erreur lors du chargement des données:', error);
+                console.log('Details:', error);
             }
         }
 
         // Charger les directions
         async function loadDirections() {
             try {
-                const records = await grist.docApi.fetchTable('DIRECTIONS');
-                allDirections = records;
+                const table = await grist.docApi.fetchTable('DIRECTIONS');
+                // Transformer les données en format utilisable
+                allDirections = [];
+                for (let i = 0; i < table.id.length; i++) {
+                    allDirections.push({
+                        id: table.id[i],
+                        direction: table.direction[i]
+                    });
+                }
                 populateDirectionSelect();
             } catch (error) {
                 console.error('Erreur lors du chargement des directions:', error);
+                console.log('Details:', error);
             }
         }
 
         // Charger les services
         async function loadServices() {
             try {
-                const records = await grist.docApi.fetchTable('SERVICES');
-                allServices = records;
+                const table = await grist.docApi.fetchTable('SERVICES');
+                // Transformer les données en format utilisable
+                allServices = [];
+                for (let i = 0; i < table.id.length; i++) {
+                    allServices.push({
+                        id: table.id[i],
+                        service: table.service[i],
+                        direction: table.direction[i],
+                        mail: table.mail[i]
+                    });
+                }
             } catch (error) {
                 console.error('Erreur lors du chargement des services:', error);
+                console.log('Details:', error);
             }
         }
 
@@ -965,11 +1010,20 @@
 
         // Ouvrir le modal
         function openModal() {
+            // Vérifier que les directions sont chargées
+            if (allDirections.length === 0) {
+                alert('Chargement des données en cours... Veuillez patienter.');
+                return;
+            }
+            
             editingRowId = null;
             document.getElementById('modalTitle').textContent = 'Nouvelle Demande';
             document.getElementById('deleteBtn').style.display = 'none';
             document.getElementById('demandForm').reset();
             document.getElementById('mail').value = '';
+            
+            // Repeupler les directions au cas où
+            populateDirectionSelect();
             
             // Date du jour par défaut
             const today = new Date().toISOString().split('T')[0];
@@ -983,7 +1037,12 @@
             editingRowId = rowId;
             const record = currentData.find(r => r.id === rowId);
             
-            if (!record) return;
+            if (!record) {
+                console.error('Record not found:', rowId);
+                return;
+            }
+            
+            console.log('Editing record:', record);
             
             document.getElementById('modalTitle').textContent = 'Modifier la Demande';
             document.getElementById('deleteBtn').style.display = 'inline-flex';
@@ -995,12 +1054,21 @@
             document.getElementById('sujet').value = record.sujet || '';
             document.getElementById('date_charge').value = convertGristDateToInput(record.date_charge);
             document.getElementById('date_reponse').value = convertGristDateToInput(record.date_reponse);
-            document.getElementById('direction').value = record.direction || '';
             
-            // Charger les services et sélectionner le bon
-            updateServices();
-            document.getElementById('service').value = record.service || '';
-            updateMail();
+            // Sélectionner la direction
+            if (record.direction) {
+                document.getElementById('direction').value = record.direction;
+                // Charger les services pour cette direction
+                updateServices();
+                
+                // Petit délai pour s'assurer que les services sont chargés
+                setTimeout(() => {
+                    if (record.service) {
+                        document.getElementById('service').value = record.service;
+                        updateMail();
+                    }
+                }, 100);
+            }
             
             document.getElementById('modalOverlay').classList.add('active');
         }
@@ -1036,16 +1104,26 @@
                 return;
             }
             
+            const directionValue = document.getElementById('direction').value;
+            const serviceValue = document.getElementById('service').value;
+            
+            if (!directionValue || !serviceValue) {
+                alert('Veuillez sélectionner une direction et un service.');
+                return;
+            }
+            
             const data = {
                 date_demande: convertInputDateToGrist(document.getElementById('date_demande').value),
-                statut: document.getElementById('statut').value,
-                nom: document.getElementById('nom').value,
-                sujet: document.getElementById('sujet').value,
-                date_charge: convertInputDateToGrist(document.getElementById('date_charge').value) || null,
-                date_reponse: convertInputDateToGrist(document.getElementById('date_reponse').value) || null,
-                direction: parseInt(document.getElementById('direction').value),
-                service: parseInt(document.getElementById('service').value)
+                statut: document.getElementById('statut').value || null,
+                nom: document.getElementById('nom').value || null,
+                sujet: document.getElementById('sujet').value || null,
+                date_charge: convertInputDateToGrist(document.getElementById('date_charge').value),
+                date_reponse: convertInputDateToGrist(document.getElementById('date_reponse').value),
+                direction: parseInt(directionValue),
+                service: parseInt(serviceValue)
             };
+            
+            console.log('Saving data:', data);
             
             try {
                 if (editingRowId) {
@@ -1064,7 +1142,7 @@
                 await refreshData();
             } catch (error) {
                 console.error('Erreur lors de la sauvegarde:', error);
-                alert('Erreur lors de la sauvegarde. Veuillez réessayer.');
+                alert('Erreur lors de la sauvegarde: ' + error.message);
             }
         }
 

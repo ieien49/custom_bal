@@ -494,6 +494,159 @@
     border-color: rgba(122,179,224,0.6);
   }
 
+  /* ── PDF MODAL ── */
+  .pdf-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+
+  .pdf-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .pdf-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    width: 90vw;
+    max-width: 1000px;
+    height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(16px) scale(0.98);
+    transition: transform 0.25s;
+  }
+
+  .pdf-overlay.open .pdf-modal {
+    transform: translateY(0) scale(1);
+  }
+
+  .pdf-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--surface2);
+  }
+
+  .pdf-modal-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .pdf-modal-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pdf-modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-light);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modal:hover {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  .btn-modal-close {
+    background: rgba(224,92,92,0.1);
+    border-color: rgba(224,92,92,0.3);
+    color: #e05c5c;
+  }
+
+  .btn-modal-close:hover {
+    background: rgba(224,92,92,0.2);
+    border-color: #e05c5c;
+    color: #e05c5c;
+  }
+
+  .pdf-modal-body {
+    flex: 1;
+    position: relative;
+    background: #525659;
+  }
+
+  .pdf-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  .pdf-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: var(--text-muted);
+    font-size: 14px;
+    background: var(--surface);
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .pdf-loading.hidden { opacity: 0; }
+
+  .pdf-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: var(--text-muted);
+    font-size: 14px;
+    background: var(--surface);
+    text-align: center;
+    padding: 40px;
+  }
+
+  .pdf-error-icon { font-size: 40px; opacity: 0.4; }
+  .pdf-error p { max-width: 340px; line-height: 1.6; }
+  .pdf-error small { font-size: 11px; color: var(--text-muted); opacity: 0.7; }
+
   /* ── LOADING / ERROR ── */
   .loading {
     display: flex;
@@ -938,24 +1091,142 @@
     return (bytes / 1048576).toFixed(1) + ' Mo';
   }
 
+  /* ── PDF MODAL ── */
+  let currentPdfUrl = null;
+
   async function openAttachment(rowId, attIndex, filename) {
+    const isPdf = filename.toLowerCase().endsWith('.pdf');
+    const url = await resolveAttachmentUrl(rowId, attIndex);
+    if (!url) {
+      alert('Impossible de résoudre l\'URL de ce fichier. Vérifiez les permissions.');
+      return;
+    }
+    if (isPdf) {
+      openPdfModal(url, filename);
+    } else {
+      window.open(url, '_blank');
+    }
+  }
+
+  async function resolveAttachmentUrl(rowId, attIndex) {
+    // Method 1: Grist attachment API with access token
     try {
       const token = await grist.docApi.getAccessToken({ readOnly: true });
       const docId = await grist.getDocName();
-      const url = `${window.location.origin}/api/docs/${docId}/attachments/${rowId}/${attIndex}/download?auth=${token}`;
-      window.open(url, '_blank');
-    } catch (e) {
-      // Fallback: try Grist attachment API
-      try {
-        const atts = getAttachments(allRecords.find(r => r.id === rowId));
-        const att = atts[attIndex];
-        if (att && att.url) window.open(att.url, '_blank');
-        else alert('Impossible d\'ouvrir ce fichier. Vérifiez les permissions.');
-      } catch (e2) {
-        alert('Impossible d\'ouvrir ce fichier : ' + e2.message);
+      return `${window.location.origin}/api/docs/${docId}/attachments/${rowId}/${attIndex}/download?auth=${token.token || token}`;
+    } catch(e) {}
+
+    // Method 2: direct attachment object URL
+    try {
+      const record = allRecords.find(r => r.id === rowId);
+      const att = getAttachments(record)[attIndex];
+      if (att && att.url) return att.url;
+    } catch(e) {}
+
+    // Method 3: Grist getAttachmentUrl
+    try {
+      const record = allRecords.find(r => r.id === rowId);
+      const att = getAttachments(record)[attIndex];
+      const attId = att && (att.id || att.attachmentId || att.rowId);
+      if (attId) {
+        const url = await grist.docApi.getAttachmentDownloadUrl(attId);
+        return url;
       }
+    } catch(e) {}
+
+    return null;
+  }
+
+  function openPdfModal(url, filename) {
+    currentPdfUrl = url;
+    document.getElementById('pdfModalTitle').textContent = filename;
+    document.getElementById('pdfLoading').classList.remove('hidden');
+
+    // Use PDF.js viewer embedded or direct iframe with #toolbar
+    // Most browsers support native PDF rendering in iframe
+    const iframe = document.getElementById('pdfIframe');
+    iframe.src = '';
+
+    // Small delay to allow loading indicator to show
+    setTimeout(() => {
+      // Append #toolbar=1&navpanes=0 for Chrome's native PDF viewer
+      iframe.src = url + '#toolbar=1&navpanes=0&scrollbar=1';
+    }, 50);
+
+    document.getElementById('pdfOverlay').classList.add('open');
+    document.addEventListener('keydown', onModalKeydown);
+  }
+
+  function closePdfModal(event) {
+    // Close only if clicking overlay background or explicit close
+    if (event && event.target !== document.getElementById('pdfOverlay')) return;
+    _doClosePdfModal();
+  }
+
+  function _doClosePdfModal() {
+    document.getElementById('pdfOverlay').classList.remove('open');
+    setTimeout(() => {
+      document.getElementById('pdfIframe').src = '';
+      currentPdfUrl = null;
+    }, 280);
+    document.removeEventListener('keydown', onModalKeydown);
+  }
+
+  function onModalKeydown(e) {
+    if (e.key === 'Escape') _doClosePdfModal();
+  }
+
+  function onIframeLoad() {
+    document.getElementById('pdfLoading').classList.add('hidden');
+  }
+
+  function onIframeError() {
+    const loading = document.getElementById('pdfLoading');
+    loading.classList.add('hidden');
+    // Show error fallback inside modal body
+    const body = document.querySelector('.pdf-modal-body');
+    const existing = body.querySelector('.pdf-error');
+    if (!existing) {
+      const err = document.createElement('div');
+      err.className = 'pdf-error';
+      err.innerHTML = `<div class="pdf-error-icon">⚠️</div>
+        <p>Impossible d'afficher ce PDF dans le navigateur.</p>
+        <button class="btn-modal" onclick="downloadCurrentPdf()" style="margin-top:8px">⬇ Télécharger à la place</button>
+        <small>Certains navigateurs bloquent l'affichage intégré des PDF selon les restrictions de sécurité.</small>`;
+      body.appendChild(err);
     }
   }
+
+  function downloadCurrentPdf() {
+    if (currentPdfUrl) window.open(currentPdfUrl, '_blank');
+  }
 </script>
-</body>
+<!-- PDF MODAL -->
+<div class="pdf-overlay" id="pdfOverlay" onclick="closePdfModal(event)">
+  <div class="pdf-modal" id="pdfModal">
+    <div class="pdf-modal-header">
+      <span class="pdf-modal-icon">📄</span>
+      <span class="pdf-modal-title" id="pdfModalTitle">Document PDF</span>
+      <div class="pdf-modal-actions">
+        <button class="btn-modal" id="btnDownload" onclick="downloadCurrentPdf()">
+          ⬇ Télécharger
+        </button>
+        <button class="btn-modal btn-modal-close" onclick="closePdfModal()">
+          ✕ Fermer
+        </button>
+      </div>
+    </div>
+    <div class="pdf-modal-body">
+      <div class="pdf-loading" id="pdfLoading">
+        <div class="spinner"></div>
+        <span>Chargement du PDF…</span>
+      </div>
+      <iframe class="pdf-iframe" id="pdfIframe" title="Visualisation PDF"
+        onload="onIframeLoad()" onerror="onIframeError()">
+      </iframe>
+    </div>
+  </div>
+</div>
+
+
 </html>

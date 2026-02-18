@@ -725,194 +725,194 @@
 </div>
 
 <script>
-  /* ── STATE ── */
+  /* ══════════════════════════════════════════
+     STATE
+  ══════════════════════════════════════════ */
   let allRecords = [];
   let selectedId = null;
   let collapsedGroups = new Set();
   let typeColors = {};
+  let attMetaCache = {};   // attId (number) → { fileName, fileSize }
+  let currentPdfUrl = null;
+
   const PALETTE = [
-    ['rgba(201,168,76,0.15)', '#c9a84c'],
-    ['rgba(92,186,138,0.15)', '#5cba8a'],
+    ['rgba(201,168,76,0.15)',  '#c9a84c'],
+    ['rgba(92,186,138,0.15)',  '#5cba8a'],
     ['rgba(122,179,224,0.15)', '#7ab3e0'],
-    ['rgba(224,92,92,0.15)', '#e05c5c'],
+    ['rgba(224,92,92,0.15)',   '#e05c5c'],
     ['rgba(180,122,224,0.15)', '#b47ae0'],
-    ['rgba(224,160,92,0.15)', '#e0a05c'],
-    ['rgba(92,180,224,0.15)', '#5cb4e0'],
-    ['rgba(224,200,92,0.15)', '#e0c85c'],
+    ['rgba(224,160,92,0.15)',  '#e0a05c'],
+    ['rgba(92,180,224,0.15)',  '#5cb4e0'],
+    ['rgba(224,200,92,0.15)',  '#e0c85c'],
   ];
   let paletteIndex = 0;
 
   function getTypeColor(type) {
-    if (!typeColors[type]) {
-      typeColors[type] = PALETTE[paletteIndex % PALETTE.length];
-      paletteIndex++;
-    }
+    if (!typeColors[type]) { typeColors[type] = PALETTE[paletteIndex++ % PALETTE.length]; }
     return typeColors[type];
   }
 
-  /* ── GRIST INIT ── */
-  grist.ready({ requiredAccess: 'read table' });
-
-  grist.onRecords((records) => {
-    allRecords = records;
-    render();
-  });
-
-  grist.onRecord((record) => {
-    // optional: highlight selected record from table
-  });
-
-  /* ── HELPERS ── */
+  /* ══════════════════════════════════════════
+     HELPERS
+  ══════════════════════════════════════════ */
+  function escapeHtml(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
   function formatDate(ts) {
     if (!ts) return '—';
-    const d = ts > 99999 ? new Date(ts * 1000) : new Date(ts);
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const d = ts > 99999 ? new Date(ts*1000) : new Date(ts);
+    return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
   }
-
   function formatDateShort(ts) {
     if (!ts) return '—';
-    const d = ts > 99999 ? new Date(ts * 1000) : new Date(ts);
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const d = ts > 99999 ? new Date(ts*1000) : new Date(ts);
+    return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
   }
-
   function getMonth(ts) {
     if (!ts) return 'Sans date';
-    const d = ts > 99999 ? new Date(ts * 1000) : new Date(ts);
-    return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const d = ts > 99999 ? new Date(ts*1000) : new Date(ts);
+    return d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
   }
-
   function getYear(ts) {
     if (!ts) return 'Sans date';
-    const d = ts > 99999 ? new Date(ts * 1000) : new Date(ts);
+    const d = ts > 99999 ? new Date(ts*1000) : new Date(ts);
     return d.getFullYear().toString();
   }
-
+  function formatSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' o';
+    if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' Ko';
+    return (bytes/1048576).toFixed(1) + ' Mo';
+  }
   function getTypeLabel(r) {
     if (r.Type && typeof r.Type === 'object') return r.Type.Name || r.Type.Nom || Object.values(r.Type)[0] || 'Type';
     return r.Type || 'Sans type';
   }
 
-  function hasAttachments(r) {
-    return r['Pièce_jointe'] && r['Pièce_jointe'].length > 0
-      || r['Piece_jointe'] && r['Piece_jointe'].length > 0
-      || r.Attachments && r.Attachments.length > 0;
+  /* Grist stores attachment columns as arrays of numeric IDs, e.g. [12, 47] */
+  function getRawAttIds(r) {
+    const raw = r['Pièce_jointe'] ?? r['Piece_jointe'] ?? r['Pièce jointe'] ?? r.Attachments ?? [];
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(x => typeof x === 'number' || typeof x === 'string');
   }
 
-  function getAttachments(r) {
-    return r['Pièce_jointe'] || r['Piece_jointe'] || r.Attachments || [];
-  }
+  function getCR(r) { return r['Compte_rendu'] || r['Compte rendu'] || ''; }
+  function hasCR(r)  { return getCR(r).trim().length > 0; }
 
-  function hasCR(r) {
-    return r['Compte_rendu'] && r['Compte_rendu'].trim().length > 0
-      || r['Compte rendu'] && r['Compte rendu'].trim().length > 0;
-  }
-
-  function getCR(r) {
-    return r['Compte_rendu'] || r['Compte rendu'] || '';
-  }
-
-  /* ── FILTER & SORT ── */
-  function getFiltered() {
-    const q = document.getElementById('searchInput').value.toLowerCase().trim();
-    const order = document.getElementById('sortOrder').value;
-
-    let list = [...allRecords];
-
-    if (q) {
-      list = list.filter(r => {
-        const objet = (r.Objet || '').toLowerCase();
-        const type = getTypeLabel(r).toLowerCase();
-        const cr = getCR(r).toLowerCase();
-        return objet.includes(q) || type.includes(q) || cr.includes(q);
-      });
+  /* ══════════════════════════════════════════
+     ATTACHMENT METADATA (via _grist_Attachments)
+  ══════════════════════════════════════════ */
+  async function loadAttachmentMeta() {
+    try {
+      const tbl = await grist.docApi.fetchTable('_grist_Attachments');
+      if (tbl && tbl.id) {
+        tbl.id.forEach((id, i) => {
+          attMetaCache[id] = {
+            fileName: tbl.fileName ? tbl.fileName[i] : `Fichier_${id}`,
+            fileSize: tbl.fileSize ? tbl.fileSize[i] : 0,
+          };
+        });
+      }
+    } catch(e) {
+      console.warn('Impossible de charger _grist_Attachments:', e);
     }
+  }
 
-    list.sort((a, b) => {
-      const da = a.Date || 0, db = b.Date || 0;
-      return order === 'desc' ? db - da : da - db;
-    });
+  function getAttMeta(attId) {
+    return attMetaCache[attId] || { fileName: `Fichier_${attId}`, fileSize: 0 };
+  }
 
+  /* ══════════════════════════════════════════
+     GRIST INIT
+  ══════════════════════════════════════════ */
+  grist.ready({ requiredAccess: 'read table' });
+
+  grist.onRecords(async (records) => {
+    allRecords = records;
+    await loadAttachmentMeta();
+    render();
+    if (selectedId) renderDetail();
+  });
+
+  /* ══════════════════════════════════════════
+     FILTER / SORT / GROUP
+  ══════════════════════════════════════════ */
+  function getFiltered() {
+    const q     = document.getElementById('searchInput').value.toLowerCase().trim();
+    const order = document.getElementById('sortOrder').value;
+    let list = [...allRecords];
+    if (q) list = list.filter(r =>
+      (r.Objet||'').toLowerCase().includes(q) ||
+      getTypeLabel(r).toLowerCase().includes(q) ||
+      getCR(r).toLowerCase().includes(q)
+    );
+    list.sort((a,b) => order==='desc' ? (b.Date||0)-(a.Date||0) : (a.Date||0)-(b.Date||0));
     return list;
   }
 
   function groupRecords(list, groupBy) {
-    if (groupBy === 'none') return [{ key: null, label: null, items: list }];
+    if (groupBy === 'none') return [{ key:null, label:null, items:list }];
     const map = new Map();
     list.forEach(r => {
-      let key;
-      if (groupBy === 'type') key = getTypeLabel(r);
-      else if (groupBy === 'month') key = getMonth(r.Date);
-      else if (groupBy === 'year') key = getYear(r.Date);
+      const key = groupBy==='type' ? getTypeLabel(r) : groupBy==='month' ? getMonth(r.Date) : getYear(r.Date);
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(r);
     });
-    return Array.from(map.entries()).map(([key, items]) => ({ key, label: key, items }));
+    return [...map.entries()].map(([key,items]) => ({ key, label:key, items }));
   }
 
-  /* ── RENDER LIST ── */
+  /* ══════════════════════════════════════════
+     RENDER LIST
+  ══════════════════════════════════════════ */
   function render() {
     const filtered = getFiltered();
-    const groupBy = document.getElementById('groupBy').value;
-    const groups = groupRecords(filtered, groupBy);
-
+    const groups   = groupRecords(filtered, document.getElementById('groupBy').value);
     document.getElementById('countBadge').textContent = filtered.length;
 
     const panel = document.getElementById('listPanel');
-
-    if (filtered.length === 0) {
-      panel.innerHTML = '<div class="no-results">Aucune réunion trouvée</div>';
-      return;
-    }
+    if (!filtered.length) { panel.innerHTML = '<div class="no-results">Aucune réunion trouvée</div>'; return; }
 
     let html = '';
-
     groups.forEach(({ key, label, items }) => {
       const collapsed = collapsedGroups.has(key);
-
       if (label !== null) {
-        html += `<div class="group-header" onclick="toggleGroup('${key?.replace(/'/g, "\\'")}')">
-          <span class="group-toggle ${collapsed ? 'collapsed' : ''}">▼</span>
+        html += `<div class="group-header" onclick="toggleGroup(${JSON.stringify(key)})">
+          <span class="group-toggle ${collapsed?'collapsed':''}">▼</span>
           <span class="group-name">${label}</span>
           <span class="group-count">${items.length}</span>
         </div>`;
       }
-
-      html += `<div class="group-items ${collapsed ? 'collapsed' : ''}">`;
-
+      html += `<div class="group-items ${collapsed?'collapsed':''}">`;
       items.forEach(r => {
         const typeLabel = getTypeLabel(r);
-        const [bg, fg] = getTypeColor(typeLabel);
-        const active = r.id === selectedId ? 'active' : '';
+        const [bg,fg]   = getTypeColor(typeLabel);
+        const active    = r.id === selectedId ? 'active' : '';
+        const attIds    = getRawAttIds(r);
         const indicators = [];
-        if (hasCR(r)) indicators.push(`<span class="indicator has-cr">✦ CR</span>`);
-        const atts = getAttachments(r);
-        if (atts.length > 0) indicators.push(`<span class="indicator has-pdf">📎 ${atts.length} fichier${atts.length > 1 ? 's' : ''}</span>`);
-
+        if (hasCR(r))        indicators.push(`<span class="indicator has-cr">✦ CR</span>`);
+        if (attIds.length>0) indicators.push(`<span class="indicator has-pdf">📎 ${attIds.length} fichier${attIds.length>1?'s':''}</span>`);
         html += `<div class="meeting-card ${active}" onclick="selectRecord(${r.id})">
-          <div class="card-top">
-            <div class="card-objet">${r.Objet || '(Sans objet)'}</div>
-          </div>
+          <div class="card-top"><div class="card-objet">${escapeHtml(r.Objet||'(Sans objet)')}</div></div>
           <div class="card-meta">
-            <span class="type-pill" style="background:${bg};color:${fg}">${typeLabel}</span>
+            <span class="type-pill" style="background:${bg};color:${fg}">${escapeHtml(typeLabel)}</span>
             <span class="card-date">${formatDateShort(r.Date)}</span>
           </div>
           ${indicators.length ? `<div class="card-indicators">${indicators.join('')}</div>` : ''}
         </div>`;
       });
-
       html += '</div>';
     });
-
     panel.innerHTML = html;
   }
 
   function toggleGroup(key) {
-    if (collapsedGroups.has(key)) collapsedGroups.delete(key);
-    else collapsedGroups.add(key);
+    collapsedGroups.has(key) ? collapsedGroups.delete(key) : collapsedGroups.add(key);
     render();
   }
 
-  /* ── SELECT RECORD ── */
+  /* ══════════════════════════════════════════
+     SELECT RECORD
+  ══════════════════════════════════════════ */
   function selectRecord(id) {
     selectedId = id;
     render();
@@ -920,67 +920,60 @@
     try { grist.setSelectedRows([id]); } catch(e) {}
   }
 
-  /* ── RENDER DETAIL ── */
+  /* ══════════════════════════════════════════
+     RENDER DETAIL
+  ══════════════════════════════════════════ */
   function renderDetail() {
     const panel = document.getElementById('detailPanel');
-    const r = allRecords.find(x => x.id === selectedId);
-
+    const r     = allRecords.find(x => x.id === selectedId);
     if (!r) {
-      panel.innerHTML = `<div class="empty-state">
-        <div class="empty-icon">📋</div>
-        <p>Sélectionnez une réunion<br>pour afficher son détail</p>
-      </div>`;
+      panel.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>Sélectionnez une réunion<br>pour afficher son détail</p></div>`;
       return;
     }
 
     const typeLabel = getTypeLabel(r);
-    const [bg, fg] = getTypeColor(typeLabel);
-    const cr = getCR(r);
-    const attachments = getAttachments(r);
+    const [bg,fg]   = getTypeColor(typeLabel);
+    const cr        = getCR(r);
+    const attIds    = getRawAttIds(r);
 
     let html = `
     <div class="detail-header">
       <div class="detail-type-date">
-        <span class="detail-type-pill" style="background:${bg};color:${fg}">${typeLabel}</span>
+        <span class="detail-type-pill" style="background:${bg};color:${fg}">${escapeHtml(typeLabel)}</span>
         <span class="detail-date">📅 ${formatDate(r.Date)}</span>
       </div>
-      <div class="detail-objet">${r.Objet || '(Sans objet)'}</div>
+      <div class="detail-objet">${escapeHtml(r.Objet||'(Sans objet)')}</div>
     </div>`;
 
     if (cr && cr.trim()) {
       html += `
       <div class="section">
-        <div class="section-header">
-          <span class="section-title">Compte rendu</span>
-          <div class="section-line"></div>
-        </div>
+        <div class="section-header"><span class="section-title">Compte rendu</span><div class="section-line"></div></div>
         <div class="cr-box">${deltaToHtml(cr)}</div>
       </div>`;
     }
 
-    if (attachments.length > 0) {
+    if (attIds.length > 0) {
       html += `
       <div class="section">
-        <div class="section-header">
-          <span class="section-title">Pièces jointes</span>
-          <div class="section-line"></div>
-        </div>
+        <div class="section-header"><span class="section-title">Pièces jointes</span><div class="section-line"></div></div>
         <div class="attachments-grid">`;
 
-      attachments.forEach((att, i) => {
-        const name = typeof att === 'string' ? att : (att.name || att.filename || `Fichier ${i + 1}`);
-        const isPdf = name.toLowerCase().endsWith('.pdf');
-        const icon = isPdf ? '📄' : '📎';
-        const size = att.size ? formatSize(att.size) : '';
+      attIds.forEach(attId => {
+        const meta   = getAttMeta(attId);
+        const name   = meta.fileName || `Fichier_${attId}`;
+        const isPdf  = name.toLowerCase().endsWith('.pdf');
+        const icon   = isPdf ? '📄' : '📎';
+        const size   = formatSize(meta.fileSize);
 
         html += `
           <div class="attachment-item">
             <div class="attachment-icon">${icon}</div>
             <div class="attachment-info">
-              <div class="attachment-name">${name}</div>
+              <div class="attachment-name">${escapeHtml(name)}</div>
               ${size ? `<div class="attachment-size">${size}</div>` : ''}
             </div>
-            <button class="btn-open" onclick="openAttachment(${r.id}, ${i}, '${name.replace(/'/g, "\\'")}')">
+            <button class="btn-open" onclick="openAttachment(${attId}, ${JSON.stringify(name)}, ${isPdf})">
               ${isPdf ? '▶ Ouvrir PDF' : '⬇ Télécharger'}
             </button>
           </div>`;
@@ -989,29 +982,27 @@
       html += `</div></div>`;
     }
 
-    if (!cr?.trim() && attachments.length === 0) {
+    if (!cr?.trim() && attIds.length === 0) {
       html += `<div class="no-results" style="padding:40px 0;color:var(--text-muted);font-size:13px;">
-        Aucun compte rendu ni pièce jointe pour cette réunion.
-      </div>`;
+        Aucun compte rendu ni pièce jointe pour cette réunion.</div>`;
     }
 
     panel.innerHTML = html;
   }
 
-  function escapeHtml(str) {
-    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  /* ── QUILL DELTA → HTML ── */
+  /* ══════════════════════════════════════════
+     QUILL DELTA → HTML
+  ══════════════════════════════════════════ */
   function deltaToHtml(raw) {
     let delta;
     if (typeof raw === 'string') {
-      const trimmed = raw.trim();
-      if (!trimmed) return '';
-      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-        try { delta = JSON.parse(trimmed); } catch(e) { return raw.split('\n').map(l => `<p>${escapeHtml(l)}</p>`).join(''); }
+      const t = raw.trim();
+      if (!t) return '';
+      if (t.startsWith('{') || t.startsWith('[')) {
+        try { delta = JSON.parse(t); }
+        catch(e) { return raw.split('\n').map(l=>`<p>${escapeHtml(l)}</p>`).join(''); }
       } else {
-        return raw.split('\n').map(l => `<p>${escapeHtml(l)}</p>`).join('');
+        return raw.split('\n').map(l=>`<p>${escapeHtml(l)}</p>`).join('');
       }
     } else { delta = raw; }
 
@@ -1019,187 +1010,128 @@
     if (!ops.length) return '';
 
     const lines = [];
-    let currentLine = { segments: [], lineAttrs: {} };
-
+    let cur = { segments:[], lineAttrs:{} };
     ops.forEach(op => {
       if (typeof op.insert !== 'string') return;
-      const parts = op.insert.split('\n');
-      parts.forEach((part, i) => {
-        if (part.length > 0) currentLine.segments.push({ text: part, attrs: op.attributes || {} });
-        if (i < parts.length - 1) {
-          currentLine.lineAttrs = op.attributes || {};
-          lines.push(currentLine);
-          currentLine = { segments: [], lineAttrs: {} };
-        }
+      op.insert.split('\n').forEach((part,i,arr) => {
+        if (part) cur.segments.push({ text:part, attrs:op.attributes||{} });
+        if (i < arr.length-1) { cur.lineAttrs = op.attributes||{}; lines.push(cur); cur={segments:[],lineAttrs:{}}; }
       });
     });
-    if (currentLine.segments.length > 0) lines.push(currentLine);
+    if (cur.segments.length) lines.push(cur);
 
-    let html = '';
-    let listStack = [];
+    let html='', listStack=[];
+    const closeLists=()=>{ while(listStack.length){ const t=listStack.pop(); html+=t==='bullet'?'</ul>':'</ol>'; } };
+    const segsToHtml=segs=>segs.map(({text,attrs})=>{
+      let s=escapeHtml(text);
+      if (attrs.bold)      s=`<strong>${s}</strong>`;
+      if (attrs.italic)    s=`<em>${s}</em>`;
+      if (attrs.underline) s=`<u>${s}</u>`;
+      if (attrs.strike)    s=`<s>${s}</s>`;
+      if (attrs.code)      s=`<code>${s}</code>`;
+      if (attrs.link)      s=`<a href="${escapeHtml(attrs.link)}" target="_blank" style="color:var(--accent2)">${s}</a>`;
+      return s;
+    }).join('');
 
-    function closeLists() {
-      while (listStack.length > 0) { const t = listStack.pop(); html += t === 'bullet' ? '</ul>' : '</ol>'; }
-    }
-
-    function renderSegments(segs) {
-      return segs.map(({ text, attrs }) => {
-        let s = escapeHtml(text);
-        if (!s) return '';
-        if (attrs.bold) s = `<strong>${s}</strong>`;
-        if (attrs.italic) s = `<em>${s}</em>`;
-        if (attrs.underline) s = `<u>${s}</u>`;
-        if (attrs.strike) s = `<s>${s}</s>`;
-        if (attrs.code) s = `<code>${s}</code>`;
-        if (attrs.link) s = `<a href="${escapeHtml(attrs.link)}" target="_blank" style="color:var(--accent2)">${s}</a>`;
-        return s;
-      }).join('');
-    }
-
-    lines.forEach(({ segments, lineAttrs }) => {
-      const content = renderSegments(segments);
+    lines.forEach(({segments,lineAttrs})=>{
+      const content  = segsToHtml(segments);
       const listType = lineAttrs.list;
-      const indent = lineAttrs.indent || 0;
-      const header = lineAttrs.header;
-      const blockquote = lineAttrs.blockquote;
-
+      const header   = lineAttrs.header;
       if (listType) {
-        const type = listType === 'ordered' ? 'ordered' : 'bullet';
-        const tag = type === 'ordered' ? 'ol' : 'ul';
-        if (listStack.length === 0 || listStack[listStack.length-1] !== type) {
-          if (listStack.length > 0 && listStack[listStack.length-1] !== type) {
-            const prev = listStack.pop(); html += prev === 'bullet' ? '</ul>' : '</ol>';
-          }
-          html += `<${tag}>`; listStack.push(type);
+        const type = listType==='ordered'?'ordered':'bullet';
+        const tag  = type==='ordered'?'ol':'ul';
+        if (!listStack.length || listStack[listStack.length-1]!==type) {
+          if (listStack.length && listStack[listStack.length-1]!==type) { const p=listStack.pop(); html+=p==='bullet'?'</ul>':'</ol>'; }
+          html+=`<${tag}>`; listStack.push(type);
         }
-        html += `<li>${content}</li>`;
+        html+=`<li>${content}</li>`;
       } else {
         closeLists();
-        if (header) html += `<h${header}>${content}</h${header}>`;
-        else if (blockquote) html += `<blockquote>${content}</blockquote>`;
-        else html += `<p>${content}</p>`;
+        if (header)              html+=`<h${header}>${content}</h${header}>`;
+        else if (lineAttrs.blockquote) html+=`<blockquote>${content}</blockquote>`;
+        else                     html+=`<p>${content}</p>`;
       }
     });
-
     closeLists();
     return html;
   }
 
-  function formatSize(bytes) {
-    if (bytes < 1024) return bytes + ' o';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' Ko';
-    return (bytes / 1048576).toFixed(1) + ' Mo';
+  /* ══════════════════════════════════════════
+     OPEN ATTACHMENT
+     attId = numeric Grist attachment ID
+  ══════════════════════════════════════════ */
+  async function openAttachment(attId, filename, isPdf) {
+    const url = await resolveAttUrl(attId);
+    if (!url) { alert("Impossible de résoudre l'URL du fichier. Vérifiez les permissions."); return; }
+    if (isPdf) openPdfModal(url, filename);
+    else       window.open(url, '_blank');
   }
 
-  /* ── PDF MODAL ── */
-  let currentPdfUrl = null;
-
-  async function openAttachment(rowId, attIndex, filename) {
-    const isPdf = filename.toLowerCase().endsWith('.pdf');
-    const url = await resolveAttachmentUrl(rowId, attIndex);
-    if (!url) {
-      alert('Impossible de résoudre l\'URL de ce fichier. Vérifiez les permissions.');
-      return;
-    }
-    if (isPdf) {
-      openPdfModal(url, filename);
-    } else {
-      window.open(url, '_blank');
-    }
-  }
-
-  async function resolveAttachmentUrl(rowId, attIndex) {
-    // Method 1: Grist attachment API with access token
+  async function resolveAttUrl(attId) {
+    // Method 1 : Grist plugin API (preferred for custom widgets)
     try {
-      const token = await grist.docApi.getAccessToken({ readOnly: true });
-      const docId = await grist.getDocName();
-      return `${window.location.origin}/api/docs/${docId}/attachments/${rowId}/${attIndex}/download?auth=${token.token || token}`;
+      const url = await grist.docApi.getAttachmentDownloadUrl(attId);
+      if (url) return url;
     } catch(e) {}
 
-    // Method 2: direct attachment object URL
+    // Method 2 : REST API with access token
     try {
-      const record = allRecords.find(r => r.id === rowId);
-      const att = getAttachments(record)[attIndex];
-      if (att && att.url) return att.url;
-    } catch(e) {}
-
-    // Method 3: Grist getAttachmentUrl
-    try {
-      const record = allRecords.find(r => r.id === rowId);
-      const att = getAttachments(record)[attIndex];
-      const attId = att && (att.id || att.attachmentId || att.rowId);
-      if (attId) {
-        const url = await grist.docApi.getAttachmentDownloadUrl(attId);
-        return url;
-      }
+      const tokenObj = await grist.docApi.getAccessToken({ readOnly: true });
+      const token    = tokenObj.token || tokenObj;
+      const docId    = await grist.getDocName();
+      return `${window.location.origin}/api/docs/${docId}/attachments/${attId}/download?auth=${token}`;
     } catch(e) {}
 
     return null;
   }
 
+  /* ══════════════════════════════════════════
+     PDF MODAL
+  ══════════════════════════════════════════ */
   function openPdfModal(url, filename) {
     currentPdfUrl = url;
     document.getElementById('pdfModalTitle').textContent = filename;
     document.getElementById('pdfLoading').classList.remove('hidden');
+    // Remove any stale error
+    const old = document.querySelector('.pdf-modal-body .pdf-error');
+    if (old) old.remove();
 
-    // Use PDF.js viewer embedded or direct iframe with #toolbar
-    // Most browsers support native PDF rendering in iframe
     const iframe = document.getElementById('pdfIframe');
     iframe.src = '';
-
-    // Small delay to allow loading indicator to show
-    setTimeout(() => {
-      // Append #toolbar=1&navpanes=0 for Chrome's native PDF viewer
-      iframe.src = url + '#toolbar=1&navpanes=0&scrollbar=1';
-    }, 50);
+    setTimeout(() => { iframe.src = url + '#toolbar=1&navpanes=0&scrollbar=1'; }, 60);
 
     document.getElementById('pdfOverlay').classList.add('open');
     document.addEventListener('keydown', onModalKeydown);
   }
 
   function closePdfModal(event) {
-    // Close only if clicking overlay background or explicit close
     if (event && event.target !== document.getElementById('pdfOverlay')) return;
-    _doClosePdfModal();
+    _doClose();
   }
-
-  function _doClosePdfModal() {
+  function _doClose() {
     document.getElementById('pdfOverlay').classList.remove('open');
-    setTimeout(() => {
-      document.getElementById('pdfIframe').src = '';
-      currentPdfUrl = null;
-    }, 280);
+    setTimeout(() => { document.getElementById('pdfIframe').src=''; currentPdfUrl=null; }, 280);
     document.removeEventListener('keydown', onModalKeydown);
   }
-
-  function onModalKeydown(e) {
-    if (e.key === 'Escape') _doClosePdfModal();
-  }
+  function onModalKeydown(e) { if (e.key==='Escape') _doClose(); }
 
   function onIframeLoad() {
     document.getElementById('pdfLoading').classList.add('hidden');
   }
-
   function onIframeError() {
-    const loading = document.getElementById('pdfLoading');
-    loading.classList.add('hidden');
-    // Show error fallback inside modal body
+    document.getElementById('pdfLoading').classList.add('hidden');
     const body = document.querySelector('.pdf-modal-body');
-    const existing = body.querySelector('.pdf-error');
-    if (!existing) {
+    if (!body.querySelector('.pdf-error')) {
       const err = document.createElement('div');
       err.className = 'pdf-error';
       err.innerHTML = `<div class="pdf-error-icon">⚠️</div>
         <p>Impossible d'afficher ce PDF dans le navigateur.</p>
         <button class="btn-modal" onclick="downloadCurrentPdf()" style="margin-top:8px">⬇ Télécharger à la place</button>
-        <small>Certains navigateurs bloquent l'affichage intégré des PDF selon les restrictions de sécurité.</small>`;
+        <small>Cela peut arriver selon les restrictions CORS de votre instance Grist.</small>`;
       body.appendChild(err);
     }
   }
-
-  function downloadCurrentPdf() {
-    if (currentPdfUrl) window.open(currentPdfUrl, '_blank');
-  }
+  function downloadCurrentPdf() { if (currentPdfUrl) window.open(currentPdfUrl,'_blank'); }
 </script>
 <!-- PDF MODAL -->
 <div class="pdf-overlay" id="pdfOverlay" onclick="closePdfModal(event)">

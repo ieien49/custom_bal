@@ -3,26 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Réunions</title>
+<title>Suivi de Réunions</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Grist Plugin SDK — injecté automatiquement par Grist dans les custom widgets -->
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1117;
-    --surface: #181c27;
-    --surface2: #1e2436;
-    --border: #2a3050;
-    --accent: #c9a84c;
-    --accent2: #e8c87a;
-    --text: #e8eaf0;
-    --text-muted: #7a82a0;
-    --text-light: #adb5cc;
-    --danger: #e05c5c;
-    --success: #5cba8a;
-    --radius: 12px;
-    --radius-sm: 8px;
-    --shadow: 0 4px 24px rgba(0,0,0,0.4);
-    --shadow-lg: 0 12px 48px rgba(0,0,0,0.6);
+    --bg: #0f0f11;
+    --surface: #18181c;
+    --surface2: #222228;
+    --border: #2e2e38;
+    --accent: #c8f04a;
+    --accent2: #4af0c8;
+    --accent3: #f04a8a;
+    --text: #e8e8ee;
+    --text-muted: #7a7a8c;
+    --text-dim: #4a4a58;
+    --status-todo: #f0a54a;
+    --status-wip: #4a9ff0;
+    --status-done: #c8f04a;
+    --status-blocked: #f04a8a;
+    --radius: 8px;
+    --radius-lg: 14px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,1134 +33,1587 @@
     font-family: 'DM Sans', sans-serif;
     background: var(--bg);
     color: var(--text);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
   }
 
-  /* ── HEADER ── */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    flex-shrink: 0;
-  }
-
-  .header-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--accent2);
-    letter-spacing: 0.02em;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .header-title::before {
-    content: '';
-    width: 4px;
-    height: 22px;
-    background: linear-gradient(180deg, var(--accent), var(--accent2));
-    border-radius: 2px;
-  }
-
-  .header-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .control-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .control-label {
-    font-size: 12px;
-    color: var(--text-muted);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  select, input[type="text"] {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 7px 12px;
-    border-radius: var(--radius-sm);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 0.2s;
-  }
-
-  select:hover, input[type="text"]:hover { border-color: var(--accent); }
-  select:focus, input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(201,168,76,0.15); }
-
-  .search-box {
-    width: 200px;
-    padding-left: 32px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%237a82a0' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.44 1.346a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: 10px center;
-  }
-
-  .count-badge {
-    background: rgba(201,168,76,0.15);
-    color: var(--accent);
-    border: 1px solid rgba(201,168,76,0.3);
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  /* ── MAIN LAYOUT ── */
-  .main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  /* ── LIST PANEL ── */
-  .list-panel {
-    width: 380px;
-    flex-shrink: 0;
-    overflow-y: auto;
-    border-right: 1px solid var(--border);
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .list-panel::-webkit-scrollbar { width: 4px; }
-  .list-panel::-webkit-scrollbar-track { background: transparent; }
-  .list-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* ── GROUP HEADER ── */
-  .group-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 12px 6px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .group-toggle {
-    color: var(--text-muted);
-    font-size: 11px;
-    transition: transform 0.2s;
-    display: inline-block;
-  }
-
-  .group-toggle.collapsed { transform: rotate(-90deg); }
-
-  .group-name {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--text-muted);
-    flex: 1;
-  }
-
-  .group-count {
-    font-size: 11px;
-    color: var(--text-muted);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 1px 7px;
-    border-radius: 10px;
-  }
-
-  .group-items { display: flex; flex-direction: column; gap: 2px; }
-  .group-items.collapsed { display: none; }
-
-  /* ── MEETING CARD ── */
-  .meeting-card {
-    padding: 12px 14px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all 0.18s;
-    border: 1px solid transparent;
-    background: transparent;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .meeting-card::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: transparent;
-    border-radius: 2px 0 0 2px;
-    transition: background 0.18s;
-  }
-
-  .meeting-card:hover {
-    background: var(--surface);
-    border-color: var(--border);
-  }
-
-  .meeting-card.active {
-    background: var(--surface2);
-    border-color: rgba(201,168,76,0.4);
-  }
-
-  .meeting-card.active::before { background: var(--accent); }
-
-  .card-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 5px;
-  }
-
-  .card-objet {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text);
-    line-height: 1.3;
-    flex: 1;
-  }
-
-  .card-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .card-date {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-
-  .type-pill {
-    font-size: 11px;
-    font-weight: 500;
-    padding: 2px 8px;
-    border-radius: 10px;
-    white-space: nowrap;
-  }
-
-  .card-indicators {
-    display: flex;
-    gap: 6px;
-    margin-top: 6px;
-  }
-
-  .indicator {
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    color: var(--text-muted);
-    padding: 2px 6px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 4px;
-  }
-
-  .indicator.has-cr { color: var(--success); }
-  .indicator.has-pdf { color: #7ab3e0; }
-
-  /* ── DETAIL PANEL ── */
-  .detail-panel {
-    flex: 1;
-    overflow-y: auto;
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  .detail-panel::-webkit-scrollbar { width: 4px; }
-  .detail-panel::-webkit-scrollbar-track { background: transparent; }
-  .detail-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .empty-state {
-    flex: 1;
-    display: flex;
+  /* ── SETUP SCREEN (fallback si hors Grist) ── */
+  #setup-screen {
+    display: none; /* caché par défaut, affiché seulement hors contexte Grist */
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    color: var(--text-muted);
+    min-height: 100vh;
+    padding: 2rem;
     text-align: center;
+    gap: 1.5rem;
   }
-
-  .empty-icon {
-    font-size: 48px;
-    opacity: 0.3;
+  #setup-screen h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.8rem;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
+  #setup-screen p { color: var(--text-muted); font-size: 1rem; max-width: 500px; }
+  .field-group { display: flex; flex-direction: column; gap: .4rem; }
 
-  .empty-state p {
-    font-size: 14px;
-    color: var(--text-muted);
-  }
-
-  /* ── DETAIL HEADER ── */
-  .detail-header {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .detail-type-date {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .detail-type-pill {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 14px;
-    border-radius: 20px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  .detail-date {
-    color: var(--text-muted);
-    font-size: 13px;
-  }
-
-  .detail-objet {
-    font-family: 'Playfair Display', serif;
-    font-size: 26px;
-    font-weight: 600;
-    color: var(--text);
-    line-height: 1.25;
-  }
-
-  /* ── SECTION ── */
-  .section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .section-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--text-muted);
-  }
-
-  .section-line {
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  /* ── COMPTE RENDU ── */
-  .cr-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px 24px;
-    font-size: 14px;
-    line-height: 1.8;
-    color: var(--text-light);
-    font-family: 'DM Sans', sans-serif;
-    max-height: 420px;
-    overflow-y: auto;
-  }
-
-  .cr-box::-webkit-scrollbar { width: 4px; }
-  .cr-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* Quill rendered content */
-  .cr-box h1 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--text); margin: 16px 0 8px; font-weight: 600; }
-  .cr-box h2 { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--text); margin: 14px 0 6px; font-weight: 600; }
-  .cr-box h3 { font-size: 15px; color: var(--accent2); margin: 12px 0 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-  .cr-box p { margin: 4px 0; }
-  .cr-box p:empty { height: 8px; }
-  .cr-box strong { color: var(--text); font-weight: 600; }
-  .cr-box em { font-style: italic; }
-  .cr-box u { text-decoration: underline; text-underline-offset: 3px; }
-  .cr-box s { text-decoration: line-through; color: var(--text-muted); }
-  .cr-box ul { margin: 6px 0 6px 20px; padding: 0; list-style: disc; }
-  .cr-box ol { margin: 6px 0 6px 20px; padding: 0; list-style: decimal; }
-  .cr-box li { margin: 3px 0; }
-  .cr-box ul ul, .cr-box ol ul { list-style: circle; margin-top: 2px; }
-  .cr-box blockquote {
-    border-left: 3px solid var(--accent);
-    margin: 10px 0;
-    padding: 4px 14px;
-    color: var(--text-muted);
-    font-style: italic;
-    background: rgba(201,168,76,0.06);
-    border-radius: 0 6px 6px 0;
-  }
-  .cr-box code {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 1px 6px;
-    font-family: monospace;
-    font-size: 12px;
-    color: var(--accent2);
-  }
-
-  /* ── ATTACHMENTS ── */
-  .attachments-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .attachment-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    transition: all 0.18s;
-  }
-
-  .attachment-item:hover {
-    border-color: rgba(122,179,224,0.5);
-    background: var(--surface2);
-  }
-
-  .attachment-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    background: rgba(122,179,224,0.1);
-    flex-shrink: 0;
-  }
-
-  .attachment-info { flex: 1; min-width: 0; }
-
-  .attachment-name {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .attachment-size {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-
-  .btn-open {
-    background: rgba(122,179,224,0.12);
-    border: 1px solid rgba(122,179,224,0.3);
-    color: #7ab3e0;
-    padding: 6px 14px;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: all 0.18s;
-    white-space: nowrap;
-  }
-
-  .btn-open:hover {
-    background: rgba(122,179,224,0.22);
-    border-color: rgba(122,179,224,0.6);
-  }
-
-  /* ── PDF MODAL ── */
-  .pdf-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.75);
-    backdrop-filter: blur(6px);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s;
-  }
-
-  .pdf-overlay.open {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  .pdf-modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-lg);
-    width: 90vw;
-    max-width: 1000px;
-    height: 88vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transform: translateY(16px) scale(0.98);
-    transition: transform 0.25s;
-  }
-
-  .pdf-overlay.open .pdf-modal {
-    transform: translateY(0) scale(1);
-  }
-
-  .pdf-modal-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    background: var(--surface2);
-  }
-
-  .pdf-modal-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-  }
-
-  .pdf-modal-title {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .pdf-modal-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .btn-modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-light);
-    padding: 6px 14px;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: all 0.18s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .btn-modal:hover {
-    background: var(--surface2);
-    border-color: var(--accent);
-    color: var(--accent2);
-  }
-
-  .btn-modal-close {
-    background: rgba(224,92,92,0.1);
-    border-color: rgba(224,92,92,0.3);
-    color: #e05c5c;
-  }
-
-  .btn-modal-close:hover {
-    background: rgba(224,92,92,0.2);
-    border-color: #e05c5c;
-    color: #e05c5c;
-  }
-
-  .pdf-modal-body {
-    flex: 1;
-    position: relative;
-    background: #525659;
-  }
-
-  .pdf-iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    display: block;
-  }
-
-  .pdf-loading {
-    position: absolute;
-    inset: 0;
-    display: flex;
+  /* ── LOADER ── */
+  #loader {
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 14px;
-    color: var(--text-muted);
-    font-size: 14px;
-    background: var(--surface);
-    pointer-events: none;
-    transition: opacity 0.3s;
+    min-height: 100vh;
+    gap: 1.2rem;
   }
-
-  .pdf-loading.hidden { opacity: 0; }
-
-  .pdf-error {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    color: var(--text-muted);
-    font-size: 14px;
-    background: var(--surface);
-    text-align: center;
-    padding: 40px;
-  }
-
-  .pdf-error-icon { font-size: 40px; opacity: 0.4; }
-  .pdf-error p { max-width: 340px; line-height: 1.6; }
-  .pdf-error small { font-size: 11px; color: var(--text-muted); opacity: 0.7; }
-
-  /* ── LOADING / ERROR ── */
-  .loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--text-muted);
-    font-size: 14px;
-    gap: 10px;
-  }
-
   .spinner {
-    width: 18px; height: 18px;
-    border: 2px solid var(--border);
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
-
   @keyframes spin { to { transform: rotate(360deg); } }
+  #loader p { color: var(--text-muted); font-size: .9rem; }
 
-  .no-results {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 13px;
+  /* ── MAIN APP ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .logo-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: inline-block; -webkit-text-fill-color: initial; }
 
-  /* ── SCROLLBARS global ── */
-  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  /* Nav tabs */
+  nav { display: flex; gap: .25rem; }
+  .tab {
+    padding: .45rem .9rem;
+    border-radius: 6px;
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all .15s;
+    background: none;
+  }
+  .tab:hover { color: var(--text); background: var(--surface2); }
+  .tab.active { color: var(--bg); background: var(--accent); border-color: var(--accent); }
 
-  /* ── ANIMATIONS ── */
-  .meeting-card { animation: fadeIn 0.15s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  /* Header actions */
+  .header-actions { display: flex; gap: .5rem; align-items: center; }
 
-  .detail-panel > * { animation: slideIn 0.2s ease; }
-  @keyframes slideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1rem;
+    border-radius: var(--radius);
+    font-size: .82rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all .15s;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-primary:hover { background: #d8ff5a; transform: translateY(-1px); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(240,74,138,.15); color: var(--accent3); border: 1px solid rgba(240,74,138,.3); }
+  .btn-danger:hover { background: rgba(240,74,138,.25); }
+  .btn-sm { padding: .3rem .6rem; font-size: .75rem; }
+  .btn-icon { padding: .45rem; border-radius: 6px; background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all .15s; }
+  .btn-icon:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ── PANELS ── */
+  .panel { display: none; flex: 1; }
+  .panel.active { display: flex; flex-direction: column; }
+
+  /* ── PAGE LAYOUT ── */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; }
+  .page-header p { color: var(--text-muted); font-size: .85rem; margin-top: .2rem; }
+
+  /* ── MEETINGS LIST ── */
+  .meetings-grid {
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+  .meeting-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .meeting-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .meeting-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+  .meeting-card:hover::before { opacity: 1; }
+  .meeting-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: .75rem; }
+  .meeting-card h3 { font-size: .95rem; font-weight: 600; line-height: 1.3; }
+  .meeting-card .meeting-date {
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-top: .25rem;
+  }
+  .meeting-card-footer { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .75rem; align-items: center; }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .2rem .55rem;
+    border-radius: 100px;
+    font-size: .72rem;
+    font-weight: 500;
+  }
+  .badge-planned { background: rgba(74,159,240,.15); color: #4a9ff0; }
+  .badge-active { background: rgba(200,240,74,.15); color: var(--accent); }
+  .badge-done { background: rgba(74,240,200,.15); color: var(--accent2); }
+  .badge-cancelled { background: rgba(74,74,88,.2); color: var(--text-dim); }
+
+  /* Status badges for actions */
+  .badge-todo { background: rgba(240,165,74,.15); color: var(--status-todo); }
+  .badge-wip { background: rgba(74,159,240,.15); color: var(--status-wip); }
+  .badge-blocked { background: rgba(240,74,138,.15); color: var(--status-blocked); }
+  .badge-done-action { background: rgba(200,240,74,.15); color: var(--status-done); }
+
+  /* Priority */
+  .badge-high { background: rgba(240,74,138,.12); color: var(--accent3); }
+  .badge-medium { background: rgba(240,165,74,.12); color: var(--status-todo); }
+  .badge-low { background: rgba(74,74,88,.15); color: var(--text-muted); }
+
+  /* ── DETAIL VIEW ── */
+  #detail-view { display: none; flex-direction: column; min-height: 100vh; }
+  .detail-header {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .detail-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.3rem; flex: 1; }
+  .detail-meta {
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+    padding: 1rem 1.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: .82rem;
+    color: var(--text-muted);
+  }
+  .detail-meta span { display: flex; align-items: center; gap: .4rem; }
+  .detail-meta strong { color: var(--text); }
+
+  /* Tabs dans le détail */
+  .detail-tabs {
+    display: flex; gap: .25rem;
+    padding: .75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .detail-tab {
+    padding: .4rem .8rem;
+    border-radius: 6px;
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all .15s;
+    background: none;
+  }
+  .detail-tab:hover { color: var(--text); }
+  .detail-tab.active { color: var(--accent); border-color: var(--accent); }
+
+  .detail-content { padding: 1.5rem; flex: 1; }
+
+  /* ── AGENDA ITEMS ── */
+  .agenda-list { display: flex; flex-direction: column; gap: .75rem; }
+  .agenda-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .agenda-item-header {
+    display: flex; align-items: center; gap: .75rem;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+  }
+  .agenda-num {
+    width: 28px; height: 28px;
+    background: var(--surface2);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: .75rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .agenda-item-title { flex: 1; font-weight: 500; font-size: .9rem; }
+  .agenda-item-body {
+    padding: 0 1.25rem 1.25rem;
+    border-top: 1px solid var(--border);
+    display: none;
+  }
+  .agenda-item.expanded .agenda-item-body { display: block; }
+  .agenda-item.expanded { border-color: var(--accent2); }
+  .field-label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 500; margin-bottom: .3rem; margin-top: .9rem; }
+
+  /* ── ACTIONS TABLE ── */
+  .actions-list { display: flex; flex-direction: column; gap: .5rem; }
+  .action-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .75rem 1rem;
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    gap: .75rem;
+    transition: border-color .15s;
+  }
+  .action-row:hover { border-color: var(--border); }
+  .action-title { font-size: .88rem; font-weight: 500; }
+  .action-meta { font-size: .75rem; color: var(--text-muted); margin-top: .15rem; }
+  .progress-bar-wrap { height: 4px; background: var(--surface2); border-radius: 2px; margin-top: .4rem; overflow: hidden; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width .3s; }
+
+  /* ── FILTERS ── */
+  .filters {
+    display: flex; gap: .5rem; flex-wrap: wrap;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .35rem .7rem;
+    color: var(--text);
+    font-size: .8rem;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    cursor: pointer;
+  }
+  .filter-select:focus { border-color: var(--accent); }
+  .search-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .35rem .7rem;
+    color: var(--text);
+    font-size: .8rem;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    min-width: 200px;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalIn .2s ease;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: scale(.96) translateY(8px); } }
+  .modal h3 { font-family: 'DM Serif Display', serif; font-size: 1.2rem; margin-bottom: 1.25rem; }
+  .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.5rem; }
+  .form-row { display: flex; flex-direction: column; gap: .4rem; margin-bottom: .9rem; }
+  .form-row label { font-size: .75rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+  .form-row input, .form-row select, .form-row textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .65rem .9rem;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .85rem;
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--accent); }
+  .form-row textarea { min-height: 80px; resize: vertical; }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+
+  /* ── STATS CARDS ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .75rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .75rem 1rem;
+    text-align: center;
+  }
+  .stat-value { font-family: 'DM Mono', monospace; font-size: 1.5rem; font-weight: 500; color: var(--accent); }
+  .stat-label { font-size: .72rem; color: var(--text-muted); margin-top: .15rem; text-transform: uppercase; letter-spacing: .05em; }
+
+  /* ── TIMELINE ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; padding: 1.5rem; }
+  .timeline-item { display: flex; gap: 1rem; }
+  .timeline-line { display: flex; flex-direction: column; align-items: center; width: 20px; }
+  .timeline-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 5px; }
+  .timeline-connector { flex: 1; width: 2px; background: var(--border); }
+  .timeline-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .9rem 1.1rem;
+    flex: 1;
+    margin-bottom: .75rem;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .timeline-card:hover { border-color: var(--accent); }
+  .timeline-card h4 { font-size: .9rem; font-weight: 600; }
+  .timeline-card .tc-meta { font-size: .75rem; color: var(--text-muted); margin-top: .2rem; font-family: 'DM Mono', monospace; }
+  .timeline-card .tc-footer { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .6rem; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .7rem 1.1rem;
+    font-size: .82rem;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    gap: .5rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    animation: slideIn .2s ease;
+    max-width: 300px;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } }
+  #toast.success { border-color: var(--accent); color: var(--accent); }
+  #toast.error { border-color: var(--accent3); color: var(--accent3); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1rem; padding: 4rem 2rem; text-align: center;
+  }
+  .empty-icon { font-size: 3rem; opacity: .3; }
+  .empty-state h3 { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: var(--text-muted); }
+  .empty-state p { font-size: .85rem; color: var(--text-dim); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    nav { display: none; }
+    .meetings-grid { grid-template-columns: 1fr; }
+    .form-grid-2 { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-title">Réunions</div>
-  <div class="header-controls">
-    <input type="text" class="search-box" id="searchInput" placeholder="Rechercher…" oninput="render()">
-    <div class="control-group">
-      <span class="control-label">Grouper</span>
-      <select id="groupBy" onchange="render()">
-        <option value="none">Aucun</option>
-        <option value="type" selected>Par type</option>
-        <option value="month">Par mois</option>
-        <option value="year">Par année</option>
-      </select>
+<!-- SETUP SCREEN (affiché seulement si ouvert hors de Grist) -->
+<div id="setup-screen">
+  <div>
+    <div class="logo" style="justify-content:center;margin-bottom:.5rem">
+      <span class="logo-dot"></span>
+      <span>MeetingOS</span>
     </div>
-    <div class="control-group">
-      <span class="control-label">Tri</span>
-      <select id="sortOrder" onchange="render()">
-        <option value="desc">Plus récent</option>
-        <option value="asc">Plus ancien</option>
-      </select>
+    <h1>Suivi de<br>Réunions</h1>
+  </div>
+  <p>Ce widget doit être installé comme <strong>Custom Widget</strong> dans un document Grist.<br>Il se connecte automatiquement sans configuration.</p>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;max-width:480px;text-align:left">
+    <div style="font-size:.8rem;color:var(--text-muted);line-height:1.8">
+      <div style="color:var(--accent);font-weight:600;margin-bottom:.5rem">📋 Installation</div>
+      1. Dans Grist → <strong>Add Widget → Custom</strong><br>
+      2. Entrer l'URL de ce fichier<br>
+      3. Accès requis : <strong>Full document access</strong><br>
+      4. Les tables sont créées automatiquement ✓
     </div>
-    <div class="count-badge" id="countBadge">0</div>
   </div>
 </div>
 
-<div class="main">
-  <div class="list-panel" id="listPanel">
-    <div class="loading"><div class="spinner"></div> Chargement…</div>
+<!-- LOADER -->
+<div id="loader">
+  <div class="spinner"></div>
+  <p id="loader-msg">Initialisation de la structure Grist…</p>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header>
+    <div class="logo">
+      <span class="logo-dot"></span>
+      MeetingOS
+    </div>
+    <nav>
+      <button class="tab active" onclick="switchTab('meetings', this)">Réunions</button>
+      <button class="tab" onclick="switchTab('actions', this)">Actions</button>
+      <button class="tab" onclick="switchTab('timeline', this)">Historique</button>
+    </nav>
+    <div class="header-actions">
+      <button class="btn btn-secondary btn-sm" onclick="refreshAll()">↻ Sync</button>
+      <button class="btn btn-primary btn-sm" onclick="openNewMeetingModal()">+ Réunion</button>
+    </div>
+  </header>
+
+  <!-- PANEL: MEETINGS -->
+  <div id="panel-meetings" class="panel active">
+    <div class="page-header">
+      <div>
+        <h2>Réunions</h2>
+        <p>Planifiez, animez et archivez vos séances</p>
+      </div>
+      <button class="btn btn-primary" onclick="openNewMeetingModal()">+ Nouvelle réunion</button>
+    </div>
+    <div class="filters">
+      <input class="search-input" type="text" placeholder="🔍 Rechercher…" oninput="filterMeetings(this.value)" id="meetings-search" />
+      <select class="filter-select" onchange="filterMeetings()" id="filter-status">
+        <option value="">Tous les statuts</option>
+        <option value="Planifiée">Planifiée</option>
+        <option value="En cours">En cours</option>
+        <option value="Terminée">Terminée</option>
+        <option value="Annulée">Annulée</option>
+      </select>
+    </div>
+    <div id="meetings-grid" class="meetings-grid"></div>
   </div>
-  <div class="detail-panel" id="detailPanel">
-    <div class="empty-state">
-      <div class="empty-icon">📋</div>
-      <p>Sélectionnez une réunion<br>pour afficher son détail</p>
+
+  <!-- PANEL: ACTIONS GLOBALES -->
+  <div id="panel-actions" class="panel">
+    <div class="page-header">
+      <div>
+        <h2>Actions</h2>
+        <p>Suivi global de tous les points à traiter</p>
+      </div>
+      <button class="btn btn-primary" onclick="openNewActionModal(null)">+ Nouvelle action</button>
+    </div>
+    <div class="stats-bar" id="actions-stats"></div>
+    <div class="filters">
+      <input class="search-input" type="text" placeholder="🔍 Rechercher une action…" oninput="filterActions()" id="actions-search" />
+      <select class="filter-select" onchange="filterActions()" id="filter-action-status">
+        <option value="">Tous les statuts</option>
+        <option value="À faire">À faire</option>
+        <option value="En cours">En cours</option>
+        <option value="Bloqué">Bloqué</option>
+        <option value="Terminé">Terminé</option>
+        <option value="Annulé">Annulé</option>
+      </select>
+      <select class="filter-select" onchange="filterActions()" id="filter-action-assignee">
+        <option value="">Tous les responsables</option>
+      </select>
+      <select class="filter-select" onchange="filterActions()" id="filter-action-priority">
+        <option value="">Toutes priorités</option>
+        <option value="Haute">Haute</option>
+        <option value="Moyenne">Moyenne</option>
+        <option value="Basse">Basse</option>
+      </select>
+    </div>
+    <div id="actions-list" class="actions-list" style="padding:1rem 1.5rem"></div>
+  </div>
+
+  <!-- PANEL: HISTORIQUE -->
+  <div id="panel-timeline" class="panel">
+    <div class="page-header">
+      <div>
+        <h2>Historique</h2>
+        <p>Chronologie de toutes les réunions</p>
+      </div>
+    </div>
+    <div id="timeline-content" class="timeline"></div>
+  </div>
+</div>
+
+<!-- DETAIL VIEW (réunion sélectionnée) -->
+<div id="detail-view">
+  <div class="detail-header">
+    <button class="btn-icon" onclick="closeDetail()" title="Retour">←</button>
+    <h2 id="detail-title">Réunion</h2>
+    <div style="display:flex;gap:.5rem">
+      <button class="btn btn-secondary btn-sm" onclick="editCurrentMeeting()">✎ Modifier</button>
+      <button class="btn btn-primary btn-sm" onclick="openNewAgendaModal()">+ Point ODJ</button>
+      <button class="btn btn-secondary btn-sm" onclick="openNewActionModal(null)">+ Action</button>
+    </div>
+  </div>
+  <div class="detail-meta" id="detail-meta"></div>
+  <div class="detail-tabs">
+    <button class="detail-tab active" onclick="switchDetailTab('odj', this)">📋 Ordre du jour</button>
+    <button class="detail-tab" onclick="switchDetailTab('cr', this)">📝 Compte rendu</button>
+    <button class="detail-tab" onclick="switchDetailTab('actions-detail', this)">⚡ Actions</button>
+    <button class="detail-tab" onclick="switchDetailTab('participants', this)">👥 Participants</button>
+  </div>
+  <div class="detail-content">
+    <div id="tab-odj"></div>
+    <div id="tab-cr" style="display:none"></div>
+    <div id="tab-actions-detail" style="display:none"></div>
+    <div id="tab-participants" style="display:none"></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="modal-meeting" class="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-meeting-title">Nouvelle réunion</h3>
+    <div class="form-row"><label>Titre *</label><input id="f-title" type="text" placeholder="Ex: Réunion de suivi projet X" /></div>
+    <div class="form-grid-2">
+      <div class="form-row"><label>Date *</label><input id="f-date" type="date" /></div>
+      <div class="form-row"><label>Statut</label>
+        <select id="f-status">
+          <option>Planifiée</option><option>En cours</option><option>Terminée</option><option>Annulée</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-row"><label>Heure début</label><input id="f-time-start" type="time" /></div>
+      <div class="form-row"><label>Heure fin</label><input id="f-time-end" type="time" /></div>
+    </div>
+    <div class="form-row"><label>Lieu / Lien visio</label><input id="f-location" type="text" placeholder="Salle B2 ou https://meet.google.com/…" /></div>
+    <div class="form-grid-2">
+      <div class="form-row"><label>Animateur</label><input id="f-facilitator" type="text" /></div>
+      <div class="form-row"><label>Rédacteur CR</label><input id="f-secretary" type="text" /></div>
+    </div>
+    <div class="form-row"><label>Notes / Contexte</label><textarea id="f-notes" placeholder="Contexte général de la réunion…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-meeting')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveMeeting()">Enregistrer</button>
     </div>
   </div>
 </div>
+
+<div id="modal-agenda" class="modal-overlay">
+  <div class="modal">
+    <h3>Point d'ordre du jour</h3>
+    <div class="form-grid-2">
+      <div class="form-row"><label>N° d'ordre</label><input id="fa-order" type="number" min="1" value="1" /></div>
+      <div class="form-row"><label>Type</label>
+        <select id="fa-type">
+          <option>Information</option><option>Discussion</option><option>Décision</option><option>Revue actions</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><label>Titre du point *</label><input id="fa-title" type="text" placeholder="Ex: Bilan financier T3" /></div>
+    <div class="form-grid-2">
+      <div class="form-row"><label>Intervenant</label><input id="fa-presenter" type="text" /></div>
+      <div class="form-row"><label>Durée prévue (min)</label><input id="fa-duration" type="number" min="5" step="5" value="15" /></div>
+    </div>
+    <div class="form-row"><label>Description / Contexte</label><textarea id="fa-description" placeholder="Détails sur ce point…"></textarea></div>
+    <div class="form-row"><label>Résumé / CR du point</label><textarea id="fa-summary" placeholder="Remplir après la réunion…"></textarea></div>
+    <div class="form-row"><label>Décision prise</label><textarea id="fa-decision" placeholder="Décision ou conclusion…" style="min-height:60px"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-agenda')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveAgendaItem()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-action" class="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-action-title">Nouvelle action</h3>
+    <div class="form-row"><label>Description *</label><input id="fac-title" type="text" placeholder="Ex: Rédiger le cahier des charges" /></div>
+    <div class="form-grid-2">
+      <div class="form-row"><label>Responsable *</label><input id="fac-assignee" type="text" placeholder="Prénom Nom" /></div>
+      <div class="form-row"><label>Échéance</label><input id="fac-due" type="date" /></div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-row"><label>Priorité</label>
+        <select id="fac-priority"><option>Haute</option><option selected>Moyenne</option><option>Basse</option></select>
+      </div>
+      <div class="form-row"><label>Statut</label>
+        <select id="fac-status">
+          <option>À faire</option><option>En cours</option><option>Bloqué</option><option>Terminé</option><option>Annulé</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Avancement (<span id="fac-pct-label">0</span>%)</label>
+      <input id="fac-progress" type="range" min="0" max="100" value="0" oninput="document.getElementById('fac-pct-label').textContent=this.value" style="background:var(--bg);accent-color:var(--accent);width:100%" />
+    </div>
+    <div class="form-row"><label>Notes</label><textarea id="fac-notes" placeholder="Commentaires, blocages…"></textarea></div>
+    <div class="form-row">
+      <label>Point ODJ lié</label>
+      <select id="fac-agenda-item"><option value="">— Aucun —</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-action')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveAction()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-participant" class="modal-overlay">
+  <div class="modal">
+    <h3>Ajouter un participant</h3>
+    <div class="form-grid-2">
+      <div class="form-row"><label>Nom *</label><input id="fp-name" type="text" /></div>
+      <div class="form-row"><label>Email</label><input id="fp-email" type="email" /></div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-row"><label>Rôle</label>
+        <select id="fp-role"><option>Invité</option><option>Intervenant</option><option>Organisateur</option><option>Excusé</option></select>
+      </div>
+      <div class="form-row"><label>Présent ?</label>
+        <select id="fp-present"><option value="1">Oui</option><option value="0">Non</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-participant')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveParticipant()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
 
 <script>
-  /* ══════════════════════════════════════════
-     STATE
-  ══════════════════════════════════════════ */
-  let allRecords = [];
-  let selectedId = null;
-  let collapsedGroups = new Set();
-  let typeColors = {};
-  let attMetaCache = {};   // attId (number) → { fileName, fileSize }
-  let currentPdfUrl = null;
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+const STATE = {
+  meetings: [], agendaItems: [], actionItems: [], participants: [],
+  currentMeetingId: null,
+  editMeetingId: null, editAgendaId: null, editActionId: null,
+  currentDetailTab: 'odj',
+};
 
-  const PALETTE = [
-    ['rgba(201,168,76,0.15)',  '#c9a84c'],
-    ['rgba(92,186,138,0.15)',  '#5cba8a'],
-    ['rgba(122,179,224,0.15)', '#7ab3e0'],
-    ['rgba(224,92,92,0.15)',   '#e05c5c'],
-    ['rgba(180,122,224,0.15)', '#b47ae0'],
-    ['rgba(224,160,92,0.15)',  '#e0a05c'],
-    ['rgba(92,180,224,0.15)',  '#5cb4e0'],
-    ['rgba(224,200,92,0.15)',  '#e0c85c'],
-  ];
-  let paletteIndex = 0;
+// ══════════════════════════════════════════════════════
+// GRIST TABLES SCHEMA
+// ══════════════════════════════════════════════════════
+const TABLES = {
+  Meetings: [
+    { id: 'title',              fields: { label: 'Titre', type: 'Text' } },
+    { id: 'date',               fields: { label: 'Date', type: 'Date' } },
+    { id: 'time_start',         fields: { label: 'Heure début', type: 'Text' } },
+    { id: 'time_end',           fields: { label: 'Heure fin', type: 'Text' } },
+    { id: 'location',           fields: { label: 'Lieu', type: 'Text' } },
+    { id: 'status',             fields: { label: 'Statut', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['Planifiée','En cours','Terminée','Annulée'] }) } },
+    { id: 'facilitator',        fields: { label: 'Animateur', type: 'Text' } },
+    { id: 'secretary',          fields: { label: 'Rédacteur', type: 'Text' } },
+    { id: 'minutes_validated',  fields: { label: 'CR validé', type: 'Bool' } },
+    { id: 'notes',              fields: { label: 'Notes', type: 'Text' } },
+  ],
+  Participants: [
+    { id: 'meeting_id',         fields: { label: 'Réunion', type: 'Ref:Meetings' } },
+    { id: 'name',               fields: { label: 'Nom', type: 'Text' } },
+    { id: 'email',              fields: { label: 'Email', type: 'Text' } },
+    { id: 'role',               fields: { label: 'Rôle', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['Invité','Intervenant','Organisateur','Excusé'] }) } },
+    { id: 'present',            fields: { label: 'Présent', type: 'Bool' } },
+  ],
+  AgendaItems: [
+    { id: 'meeting_id',         fields: { label: 'Réunion', type: 'Ref:Meetings' } },
+    { id: 'order_num',          fields: { label: 'N° ordre', type: 'Int' } },
+    { id: 'title',              fields: { label: 'Titre', type: 'Text' } },
+    { id: 'description',        fields: { label: 'Description', type: 'Text' } },
+    { id: 'duration_min',       fields: { label: 'Durée (min)', type: 'Int' } },
+    { id: 'presenter',          fields: { label: 'Intervenant', type: 'Text' } },
+    { id: 'type',               fields: { label: 'Type', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['Information','Discussion','Décision','Revue actions'] }) } },
+    { id: 'summary',            fields: { label: 'Résumé CR', type: 'Text' } },
+    { id: 'decision',           fields: { label: 'Décision', type: 'Text' } },
+  ],
+  ActionItems: [
+    { id: 'agenda_item_id',     fields: { label: 'Point ODJ', type: 'Ref:AgendaItems' } },
+    { id: 'meeting_id',         fields: { label: 'Réunion', type: 'Ref:Meetings' } },
+    { id: 'title',              fields: { label: 'Description', type: 'Text' } },
+    { id: 'assignee',           fields: { label: 'Responsable', type: 'Text' } },
+    { id: 'due_date',           fields: { label: 'Échéance', type: 'Date' } },
+    { id: 'priority',           fields: { label: 'Priorité', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['Haute','Moyenne','Basse'] }) } },
+    { id: 'status',             fields: { label: 'Statut', type: 'Choice', widgetOptions: JSON.stringify({ choices: ['À faire','En cours','Bloqué','Terminé','Annulé'] }) } },
+    { id: 'progress_pct',       fields: { label: 'Avancement %', type: 'Int' } },
+    { id: 'notes',              fields: { label: 'Notes', type: 'Text' } },
+    { id: 'reviewed_in_meeting_id', fields: { label: 'Revue dans réunion', type: 'Ref:Meetings' } },
+  ],
+};
 
-  function getTypeColor(type) {
-    if (!typeColors[type]) { typeColors[type] = PALETTE[paletteIndex++ % PALETTE.length]; }
-    return typeColors[type];
+// ══════════════════════════════════════════════════════
+// GRIST NATIVE API (via grist.docApi dans le widget)
+// ══════════════════════════════════════════════════════
+
+// Toutes les opérations passent par grist.docApi — pas de fetch/clé API nécessaire
+
+async function getTablesList() {
+  const tables = await grist.docApi.listTables();
+  return tables;
+}
+
+async function createTable(name, cols) {
+  // AddTable : (table_id, columns) où columns = [{id, label, type, isFormula, formula}]
+  const columns = cols.map(c => ({
+    id: c.id,
+    label: c.fields.label,
+    type: c.fields.type === 'Ref:Meetings'    ? 'Ref:Meetings'
+        : c.fields.type === 'Ref:AgendaItems' ? 'Ref:AgendaItems'
+        : c.fields.type,
+    isFormula: false,
+    formula: '',
+  }));
+  await grist.docApi.applyUserActions([
+    ['AddTable', name, columns]
+  ]);
+}
+
+async function getRecords(table) {
+  try {
+    const data = await grist.docApi.fetchTable(table);
+    // fetchTable retourne { id: [...], col1: [...], col2: [...] }
+    const ids = data.id;
+    const cols = Object.keys(data).filter(k => k !== 'id' && k !== 'manualSort');
+    return ids.map((id, i) => {
+      const rec = { id };
+      cols.forEach(c => { rec[c] = data[c][i]; });
+      return rec;
+    });
+  } catch(e) {
+    console.warn('fetchTable error for', table, e);
+    return [];
+  }
+}
+
+async function addRecord(table, fields) {
+  // Filtrer les valeurs nulles/undefined
+  const colValues = {};
+  Object.entries(fields).forEach(([k, v]) => { if (v !== undefined && v !== null) colValues[k] = v; });
+  // BulkAddRecord : (table, row_ids, col_values) — row_ids=[0] = auto-assign
+  const colKeys = Object.keys(colValues);
+  const colData = {};
+  colKeys.forEach(k => { colData[k] = [colValues[k]]; });
+  const result = await grist.docApi.applyUserActions([
+    ['BulkAddRecord', table, [null], colData]
+  ]);
+  return { id: result?.retValues?.[0]?.[0] };
+}
+
+async function updateRecord(table, id, fields) {
+  const colValues = {};
+  Object.entries(fields).forEach(([k, v]) => { if (v !== undefined) colValues[k] = v; });
+  await grist.docApi.applyUserActions([
+    ['BulkUpdateRecord', table, [id], Object.fromEntries(Object.entries(colValues).map(([k,v]) => [k,[v]]))]
+  ]);
+}
+
+async function deleteRecord(table, id) {
+  await grist.docApi.applyUserActions([
+    ['BulkRemoveRecord', table, [id]]
+  ]);
+}
+
+// ══════════════════════════════════════════════════════
+// INIT GRIST WIDGET
+// ══════════════════════════════════════════════════════
+async function initWidget() {
+  if (typeof grist === 'undefined') {
+    // Hors contexte Grist : afficher l'écran d'info
+    document.getElementById('setup-screen').style.display = 'flex';
+    return;
   }
 
-  /* ══════════════════════════════════════════
-     HELPERS
-  ══════════════════════════════════════════ */
-  function escapeHtml(str) {
-    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-  function formatDate(ts) {
-    if (!ts) return '—';
-    const d = ts > 99999 ? new Date(ts*1000) : new Date(ts);
-    return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
-  }
-  function formatDateShort(ts) {
-    if (!ts) return '—';
-    const d = ts > 99999 ? new Date(ts*1000) : new Date(ts);
-    return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
-  }
-  function getMonth(ts) {
-    if (!ts) return 'Sans date';
-    const d = ts > 99999 ? new Date(ts*1000) : new Date(ts);
-    return d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
-  }
-  function getYear(ts) {
-    if (!ts) return 'Sans date';
-    const d = ts > 99999 ? new Date(ts*1000) : new Date(ts);
-    return d.getFullYear().toString();
-  }
-  function formatSize(bytes) {
-    if (!bytes) return '';
-    if (bytes < 1024) return bytes + ' o';
-    if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' Ko';
-    return (bytes/1048576).toFixed(1) + ' Mo';
-  }
-  function getTypeLabel(r) {
-    if (r.Type && typeof r.Type === 'object') return r.Type.Name || r.Type.Nom || Object.values(r.Type)[0] || 'Type';
-    return r.Type || 'Sans type';
-  }
-
-  /* Grist stores attachment columns as arrays of numeric IDs, e.g. [12, 47] */
-  function getRawAttIds(r) {
-    const raw = r['Pièce_jointe'] ?? r['Piece_jointe'] ?? r['Pièce jointe'] ?? r.Attachments ?? [];
-    if (!Array.isArray(raw)) return [];
-    return raw.filter(x => typeof x === 'number' || typeof x === 'string');
-  }
-
-  function getCR(r) { return r['Compte_rendu'] || r['Compte rendu'] || ''; }
-  function hasCR(r)  { return getCR(r).trim().length > 0; }
-
-  /* ══════════════════════════════════════════
-     ATTACHMENT METADATA (via _grist_Attachments)
-  ══════════════════════════════════════════ */
-  async function loadAttachmentMeta() {
-    try {
-      const tbl = await grist.docApi.fetchTable('_grist_Attachments');
-      if (tbl && tbl.id) {
-        tbl.id.forEach((id, i) => {
-          attMetaCache[id] = {
-            fileName: tbl.fileName ? tbl.fileName[i] : `Fichier_${id}`,
-            fileSize: tbl.fileSize ? tbl.fileSize[i] : 0,
-          };
-        });
-      }
-    } catch(e) {
-      console.warn('Impossible de charger _grist_Attachments:', e);
-    }
-  }
-
-  function getAttMeta(attId) {
-    return attMetaCache[attId] || { fileName: `Fichier_${attId}`, fileSize: 0 };
-  }
-
-  /* ══════════════════════════════════════════
-     GRIST INIT
-  ══════════════════════════════════════════ */
-  grist.ready({ requiredAccess: 'read table' });
-
-  grist.onRecords(async (records) => {
-    allRecords = records;
-    await loadAttachmentMeta();
-    render();
-    if (selectedId) renderDetail();
+  grist.ready({
+    requiredAccess: 'full',
+    columns: [],        // Ce widget n'a pas besoin de mapping de colonnes
+    allowSelectBy: false,
   });
 
-  /* ══════════════════════════════════════════
-     FILTER / SORT / GROUP
-  ══════════════════════════════════════════ */
-  function getFiltered() {
-    const q     = document.getElementById('searchInput').value.toLowerCase().trim();
-    const order = document.getElementById('sortOrder').value;
-    let list = [...allRecords];
-    if (q) list = list.filter(r =>
-      (r.Objet||'').toLowerCase().includes(q) ||
-      getTypeLabel(r).toLowerCase().includes(q) ||
-      getCR(r).toLowerCase().includes(q)
-    );
-    list.sort((a,b) => order==='desc' ? (b.Date||0)-(a.Date||0) : (a.Date||0)-(b.Date||0));
-    return list;
-  }
-
-  function groupRecords(list, groupBy) {
-    if (groupBy === 'none') return [{ key:null, label:null, items:list }];
-    const map = new Map();
-    list.forEach(r => {
-      const key = groupBy==='type' ? getTypeLabel(r) : groupBy==='month' ? getMonth(r.Date) : getYear(r.Date);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(r);
-    });
-    return [...map.entries()].map(([key,items]) => ({ key, label:key, items }));
-  }
-
-  /* ══════════════════════════════════════════
-     RENDER LIST
-  ══════════════════════════════════════════ */
-  function render() {
-    const filtered = getFiltered();
-    const groups   = groupRecords(filtered, document.getElementById('groupBy').value);
-    document.getElementById('countBadge').textContent = filtered.length;
-
-    const panel = document.getElementById('listPanel');
-    if (!filtered.length) { panel.innerHTML = '<div class="no-results">Aucune réunion trouvée</div>'; return; }
-
-    let html = '';
-    groups.forEach(({ key, label, items }) => {
-      const collapsed = collapsedGroups.has(key);
-      if (label !== null) {
-        html += `<div class="group-header" onclick="toggleGroup(${JSON.stringify(key)})">
-          <span class="group-toggle ${collapsed?'collapsed':''}">▼</span>
-          <span class="group-name">${label}</span>
-          <span class="group-count">${items.length}</span>
-        </div>`;
-      }
-      html += `<div class="group-items ${collapsed?'collapsed':''}">`;
-      items.forEach(r => {
-        const typeLabel = getTypeLabel(r);
-        const [bg,fg]   = getTypeColor(typeLabel);
-        const active    = r.id === selectedId ? 'active' : '';
-        const attIds    = getRawAttIds(r);
-        const indicators = [];
-        if (hasCR(r))        indicators.push(`<span class="indicator has-cr">✦ CR</span>`);
-        if (attIds.length>0) indicators.push(`<span class="indicator has-pdf">📎 ${attIds.length} fichier${attIds.length>1?'s':''}</span>`);
-        html += `<div class="meeting-card ${active}" onclick="selectRecord(${r.id})">
-          <div class="card-top"><div class="card-objet">${escapeHtml(r.Objet||'(Sans objet)')}</div></div>
-          <div class="card-meta">
-            <span class="type-pill" style="background:${bg};color:${fg}">${escapeHtml(typeLabel)}</span>
-            <span class="card-date">${formatDateShort(r.Date)}</span>
-          </div>
-          ${indicators.length ? `<div class="card-indicators">${indicators.join('')}</div>` : ''}
-        </div>`;
-      });
-      html += '</div>';
-    });
-    panel.innerHTML = html;
-  }
-
-  function toggleGroup(key) {
-    collapsedGroups.has(key) ? collapsedGroups.delete(key) : collapsedGroups.add(key);
-    render();
-  }
-
-  /* ══════════════════════════════════════════
-     SELECT RECORD
-  ══════════════════════════════════════════ */
-  function selectRecord(id) {
-    selectedId = id;
-    render();
-    renderDetail();
-    try { grist.setSelectedRows([id]); } catch(e) {}
-  }
-
-  /* ══════════════════════════════════════════
-     RENDER DETAIL
-  ══════════════════════════════════════════ */
-  function renderDetail() {
-    const panel = document.getElementById('detailPanel');
-    const r     = allRecords.find(x => x.id === selectedId);
-    if (!r) {
-      panel.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>Sélectionnez une réunion<br>pour afficher son détail</p></div>`;
-      return;
+  // Démarrer dès que le plugin est prêt
+  grist.onReady(async () => {
+    hide('setup-screen');
+    show('loader');
+    try {
+      await ensureTables();
+      await loadAll();
+      hide('loader');
+      show('app');
+      renderMeetings();
+      showToast('✓ Connecté à Grist', 'success');
+    } catch(e) {
+      console.error('Init error', e);
+      setLoaderMsg('Erreur : ' + e.message);
     }
+  });
+}
 
-    const typeLabel = getTypeLabel(r);
-    const [bg,fg]   = getTypeColor(typeLabel);
-    const cr        = getCR(r);
-    const attIds    = getRawAttIds(r);
+// ══════════════════════════════════════════════════════
+// SETUP & ENSURE TABLES
+// ══════════════════════════════════════════════════════
+async function ensureTables() {
+  setLoaderMsg('Vérification de la structure Grist…');
+  let existing = [];
+  try { existing = await getTablesList(); } catch(e) { existing = []; }
 
-    let html = `
-    <div class="detail-header">
-      <div class="detail-type-date">
-        <span class="detail-type-pill" style="background:${bg};color:${fg}">${escapeHtml(typeLabel)}</span>
-        <span class="detail-date">📅 ${formatDate(r.Date)}</span>
-      </div>
-      <div class="detail-objet">${escapeHtml(r.Objet||'(Sans objet)')}</div>
+  for (const [name, cols] of Object.entries(TABLES)) {
+    if (!existing.includes(name)) {
+      setLoaderMsg(`Création de la table "${name}"…`);
+      try { await createTable(name, cols); } catch(e) { console.warn('Table create warn:', name, e); }
+    }
+  }
+  setLoaderMsg('Structure vérifiée ✓');
+}
+
+async function loadAll() {
+  setLoaderMsg('Chargement des données…');
+  const [m, a, ai, p] = await Promise.all([
+    getRecords('Meetings'), getRecords('AgendaItems'),
+    getRecords('ActionItems'), getRecords('Participants'),
+  ]);
+  STATE.meetings     = m;
+  STATE.agendaItems  = a;
+  STATE.actionItems  = ai;
+  STATE.participants = p;
+}
+
+async function refreshAll() {
+  showToast('Synchronisation…');
+  await loadAll();
+  renderMeetings();
+  if (STATE.currentMeetingId) renderDetail(STATE.currentMeetingId);
+  renderActionsPanel();
+  renderTimeline();
+  showToast('✓ Données mises à jour', 'success');
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER HELPERS
+// ══════════════════════════════════════════════════════
+function show(id) { const el = document.getElementById(id); if(el) { el.style.display='flex'; } }
+function hide(id) { const el = document.getElementById(id); if(el) { el.style.display='none'; } }
+function setLoaderMsg(msg) { document.getElementById('loader-msg').textContent = msg; }
+
+function statusBadge(s) {
+  const map = { 'Planifiée': 'planned', 'En cours': 'active', 'Terminée': 'done', 'Annulée': 'cancelled' };
+  return `<span class="badge badge-${map[s]||'planned'}">${s}</span>`;
+}
+function actionStatusBadge(s) {
+  const map = { 'À faire':'todo','En cours':'wip','Bloqué':'blocked','Terminé':'done-action','Annulé':'cancelled' };
+  return `<span class="badge badge-${map[s]||'todo'}">${s}</span>`;
+}
+function priorityBadge(p) {
+  const map = { 'Haute':'high','Moyenne':'medium','Basse':'low' };
+  return `<span class="badge badge-${map[p]||'medium'}">${p}</span>`;
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  // Grist stores dates as Unix seconds
+  if (typeof d === 'number') d = new Date(d * 1000);
+  else d = new Date(d);
+  return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+}
+function fmtDateInput(d) {
+  if (!d) return '';
+  if (typeof d === 'number') d = new Date(d * 1000);
+  else d = new Date(d);
+  return d.toISOString().split('T')[0];
+}
+function dateToGrist(str) {
+  if (!str) return null;
+  return Math.floor(new Date(str).getTime() / 1000);
+}
+
+// ══════════════════════════════════════════════════════
+// MEETINGS PANEL
+// ══════════════════════════════════════════════════════
+function renderMeetings() {
+  const search = (document.getElementById('meetings-search')?.value || '').toLowerCase();
+  const statusF = document.getElementById('filter-status')?.value || '';
+  let meetings = STATE.meetings.filter(m => {
+    if (statusF && m.status !== statusF) return false;
+    if (search && !m.title?.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  meetings.sort((a, b) => (b.date || 0) - (a.date || 0));
+  const grid = document.getElementById('meetings-grid');
+  if (!meetings.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">📅</div>
+      <h3>Aucune réunion</h3>
+      <p>Créez votre première réunion pour commencer</p>
     </div>`;
+    return;
+  }
+  grid.innerHTML = meetings.map(m => {
+    const actions = STATE.actionItems.filter(a => a.meeting_id === m.id);
+    const openActions = actions.filter(a => !['Terminé','Annulé'].includes(a.status));
+    const agendaCount = STATE.agendaItems.filter(a => a.meeting_id === m.id).length;
+    return `<div class="meeting-card" onclick="openDetail(${m.id})">
+      <div class="meeting-card-header">
+        <div>
+          <h3>${m.title || 'Sans titre'}</h3>
+          <div class="meeting-date">📅 ${fmtDate(m.date)}${m.time_start ? ' · ' + m.time_start : ''}</div>
+        </div>
+        ${statusBadge(m.status || 'Planifiée')}
+      </div>
+      ${m.location ? `<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem">📍 ${m.location}</div>` : ''}
+      ${m.facilitator ? `<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem">👤 ${m.facilitator}</div>` : ''}
+      <div class="meeting-card-footer">
+        <span class="badge" style="background:var(--surface2);color:var(--text-muted)">📋 ${agendaCount} point${agendaCount!==1?'s':''}</span>
+        ${openActions.length ? `<span class="badge badge-todo">⚡ ${openActions.length} action${openActions.length!==1?'s':''}</span>` : ''}
+        ${m.minutes_validated ? `<span class="badge badge-done">✓ CR validé</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
 
-    if (cr && cr.trim()) {
-      html += `
-      <div class="section">
-        <div class="section-header"><span class="section-title">Compte rendu</span><div class="section-line"></div></div>
-        <div class="cr-box">${deltaToHtml(cr)}</div>
-      </div>`;
-    }
+function filterMeetings() { renderMeetings(); }
 
-    if (attIds.length > 0) {
-      html += `
-      <div class="section">
-        <div class="section-header"><span class="section-title">Pièces jointes</span><div class="section-line"></div></div>
-        <div class="attachments-grid">`;
+// ══════════════════════════════════════════════════════
+// DETAIL VIEW
+// ══════════════════════════════════════════════════════
+function openDetail(id) {
+  STATE.currentMeetingId = id;
+  const m = STATE.meetings.find(x => x.id === id);
+  if (!m) return;
+  hide('app');
+  const dv = document.getElementById('detail-view');
+  dv.style.display = 'flex';
+  dv.style.flexDirection = 'column';
+  document.getElementById('detail-title').textContent = m.title || 'Réunion';
+  document.getElementById('detail-meta').innerHTML = `
+    <span>📅 <strong>${fmtDate(m.date)}</strong></span>
+    ${m.time_start ? `<span>⏰ <strong>${m.time_start}${m.time_end?' → '+m.time_end:''}</strong></span>` : ''}
+    ${m.location ? `<span>📍 <strong>${m.location}</strong></span>` : ''}
+    ${m.facilitator ? `<span>👤 Animateur: <strong>${m.facilitator}</strong></span>` : ''}
+    ${m.secretary ? `<span>✏️ Rédacteur: <strong>${m.secretary}</strong></span>` : ''}
+    ${statusBadge(m.status || 'Planifiée')}
+    ${m.minutes_validated ? `<span class="badge badge-done">✓ CR validé</span>` : ''}
+  `;
+  switchDetailTab('odj', document.querySelector('.detail-tab'));
+  renderDetailODJ();
+}
 
-      attIds.forEach(attId => {
-        const meta   = getAttMeta(attId);
-        const name   = meta.fileName || `Fichier_${attId}`;
-        const isPdf  = name.toLowerCase().endsWith('.pdf');
-        const icon   = isPdf ? '📄' : '📎';
-        const size   = formatSize(meta.fileSize);
+function closeDetail() {
+  document.getElementById('detail-view').style.display = 'none';
+  show('app');
+}
 
-        html += `
-          <div class="attachment-item">
-            <div class="attachment-icon">${icon}</div>
-            <div class="attachment-info">
-              <div class="attachment-name">${escapeHtml(name)}</div>
-              ${size ? `<div class="attachment-size">${size}</div>` : ''}
+function switchDetailTab(tab, el) {
+  STATE.currentDetailTab = tab;
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else {
+    const tabs = document.querySelectorAll('.detail-tab');
+    const map = { 'odj': 0, 'cr': 1, 'actions-detail': 2, 'participants': 3 };
+    if (tabs[map[tab]]) tabs[map[tab]].classList.add('active');
+  }
+  ['odj','cr','actions-detail','participants'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'odj') renderDetailODJ();
+  if (tab === 'cr') renderDetailCR();
+  if (tab === 'actions-detail') renderDetailActions();
+  if (tab === 'participants') renderDetailParticipants();
+}
+
+function renderDetailODJ() {
+  const id = STATE.currentMeetingId;
+  const items = STATE.agendaItems.filter(a => a.meeting_id === id).sort((a,b) => (a.order_num||0)-(b.order_num||0));
+  const el = document.getElementById('tab-odj');
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>Aucun point à l'ordre du jour</h3><p>Ajoutez des points avec le bouton "+ Point ODJ"</p></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="agenda-list">${items.map(item => `
+    <div class="agenda-item" id="agenda-${item.id}">
+      <div class="agenda-item-header" onclick="toggleAgenda(${item.id})">
+        <div class="agenda-num">${item.order_num || '?'}</div>
+        <div class="agenda-item-title">${item.title || 'Point sans titre'}</div>
+        <span class="badge" style="background:var(--surface2);color:var(--text-muted);font-size:.7rem">${item.type||'Discussion'}</span>
+        ${item.duration_min ? `<span style="font-size:.75rem;color:var(--text-muted);font-family:'DM Mono',monospace">${item.duration_min}min</span>` : ''}
+        <button class="btn-icon" onclick="event.stopPropagation();editAgendaItem(${item.id})" title="Modifier">✎</button>
+        <button class="btn-icon" style="color:var(--accent3)" onclick="event.stopPropagation();deleteAgendaItem(${item.id})" title="Supprimer">✕</button>
+        <span style="color:var(--text-dim);font-size:.8rem">▾</span>
+      </div>
+      <div class="agenda-item-body">
+        ${item.presenter ? `<div class="field-label">Intervenant</div><div style="font-size:.85rem">${item.presenter}</div>` : ''}
+        ${item.description ? `<div class="field-label">Description</div><div style="font-size:.85rem;color:var(--text-muted);white-space:pre-wrap">${item.description}</div>` : ''}
+        <div class="field-label">Résumé / CR</div>
+        <textarea style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.6rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.83rem;resize:vertical;min-height:80px;outline:none" 
+          placeholder="Résumé du point après la réunion…" 
+          onblur="saveAgendaSummary(${item.id}, this.value)">${item.summary || ''}</textarea>
+        <div class="field-label">Décision</div>
+        <textarea style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.6rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.83rem;resize:vertical;min-height:60px;outline:none" 
+          placeholder="Décision prise…" 
+          onblur="saveAgendaDecision(${item.id}, this.value)">${item.decision || ''}</textarea>
+        <div style="display:flex;gap:.5rem;margin-top:.75rem">
+          <button class="btn btn-secondary btn-sm" onclick="openNewActionModal(${item.id})">+ Action liée</button>
+        </div>
+        ${renderMiniActions(item.id)}
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function renderMiniActions(agendaItemId) {
+  const actions = STATE.actionItems.filter(a => a.agenda_item_id === agendaItemId);
+  if (!actions.length) return '';
+  return `<div style="margin-top:.75rem">
+    <div class="field-label">Actions liées</div>
+    <div style="display:flex;flex-direction:column;gap:.4rem">
+    ${actions.map(a => `<div style="background:var(--surface2);border-radius:6px;padding:.5rem .75rem;font-size:.8rem;display:flex;align-items:center;gap:.5rem">
+      <span style="flex:1">${a.title}</span>
+      <span style="color:var(--text-muted)">${a.assignee}</span>
+      ${actionStatusBadge(a.status||'À faire')}
+    </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderDetailCR() {
+  const id = STATE.currentMeetingId;
+  const m = STATE.meetings.find(x => x.id === id);
+  const items = STATE.agendaItems.filter(a => a.meeting_id === id).sort((a,b)=>(a.order_num||0)-(b.order_num||0));
+  const el = document.getElementById('tab-cr');
+  el.innerHTML = `
+    <div style="max-width:720px">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem">
+        <h3 style="font-family:'DM Serif Display',serif;font-size:1.1rem;flex:1">Compte rendu</h3>
+        <label style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--text-muted);cursor:pointer">
+          <input type="checkbox" ${m?.minutes_validated?'checked':''} onchange="toggleCRValidated(this.checked)" style="accent-color:var(--accent)"> CR validé
+        </label>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem">
+        <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:1rem">${m?.title||'Réunion'}</div>
+        <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:1.5rem;font-family:'DM Mono',monospace">
+          ${fmtDate(m?.date)} ${m?.time_start||''} ${m?.time_end?'→ '+m.time_end:''} ${m?.location?'· '+m.location:''}
+        </div>
+        ${m?.notes ? `<div style="margin-bottom:1.5rem;font-size:.85rem;color:var(--text-muted);padding:.75rem;background:var(--surface2);border-radius:6px">${m.notes}</div>` : ''}
+        ${items.length ? items.map((item,i) => `
+          <div style="margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+              <span style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-muted)">${item.order_num||i+1}.</span>
+              <strong style="font-size:.9rem">${item.title}</strong>
+              <span class="badge" style="background:var(--surface2);color:var(--text-muted);font-size:.68rem">${item.type||'Discussion'}</span>
             </div>
-            <button class="btn-open" onclick="openAttachment(${attId}, ${JSON.stringify(name)}, ${isPdf})">
-              ${isPdf ? '▶ Ouvrir PDF' : '⬇ Télécharger'}
-            </button>
-          </div>`;
-      });
+            ${item.summary ? `<p style="font-size:.83rem;color:var(--text-muted);margin-bottom:.4rem;white-space:pre-wrap">${item.summary}</p>` : '<p style="font-size:.8rem;color:var(--text-dim);font-style:italic">Aucun résumé.</p>'}
+            ${item.decision ? `<div style="background:rgba(200,240,74,.07);border-left:3px solid var(--accent);padding:.5rem .75rem;border-radius:0 6px 6px 0;font-size:.82rem;margin-top:.4rem"><strong style="color:var(--accent)">Décision :</strong> ${item.decision}</div>` : ''}
+          </div>`).join('') : '<p style="color:var(--text-dim);font-size:.85rem">Aucun point à l\'ordre du jour.</p>'}
+        ${renderCRActions(id)}
+      </div>
+    </div>`;
+}
 
-      html += `</div></div>`;
+function renderCRActions(meetingId) {
+  const actions = STATE.actionItems.filter(a => a.meeting_id === meetingId && !['Terminé','Annulé'].includes(a.status));
+  if (!actions.length) return '';
+  return `<div style="margin-top:1rem">
+    <div style="font-weight:600;font-size:.85rem;margin-bottom:.6rem">⚡ Actions issues de cette réunion</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+      <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:.3rem">Action</th><th style="text-align:left;padding:.3rem">Responsable</th><th style="text-align:left;padding:.3rem">Échéance</th><th style="text-align:left;padding:.3rem">Statut</th>
+      </tr></thead>
+      <tbody>${actions.map(a => `<tr style="border-bottom:1px solid var(--surface2)">
+        <td style="padding:.4rem">${a.title}</td>
+        <td style="padding:.4rem;color:var(--text-muted)">${a.assignee}</td>
+        <td style="padding:.4rem;font-family:'DM Mono',monospace;font-size:.75rem">${fmtDate(a.due_date)}</td>
+        <td style="padding:.4rem">${actionStatusBadge(a.status||'À faire')}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderDetailActions() {
+  const id = STATE.currentMeetingId;
+  const actions = STATE.actionItems.filter(a => a.meeting_id === id);
+  const el = document.getElementById('tab-actions-detail');
+  if (!actions.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><h3>Aucune action</h3><p>Créez des actions depuis les points ODJ ou le bouton "+ Action"</p></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="actions-list">${actions.map(a => renderActionRow(a)).join('')}</div>`;
+}
+
+function renderDetailParticipants() {
+  const id = STATE.currentMeetingId;
+  const parts = STATE.participants.filter(p => p.meeting_id === id);
+  const el = document.getElementById('tab-participants');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+      <button class="btn btn-primary btn-sm" onclick="openParticipantModal()">+ Ajouter participant</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.5rem">
+    ${!parts.length ? `<div class="empty-state"><div class="empty-icon">👥</div><h3>Aucun participant</h3></div>` :
+      parts.map(p => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem">
+        <div style="width:36px;height:36px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">${(p.name||'?')[0].toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-size:.88rem;font-weight:500">${p.name}</div>
+          ${p.email ? `<div style="font-size:.75rem;color:var(--text-muted)">${p.email}</div>` : ''}
+        </div>
+        <span class="badge" style="background:var(--surface2);color:var(--text-muted)">${p.role||'Invité'}</span>
+        <span class="badge ${p.present?'badge-done':'badge-cancelled'}">${p.present?'✓ Présent':'Absent'}</span>
+        <button class="btn-icon" style="color:var(--accent3)" onclick="deleteParticipant(${p.id})">✕</button>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// ACTIONS PANEL
+// ══════════════════════════════════════════════════════
+function renderActionsPanel() {
+  const actions = STATE.actionItems;
+  const todo = actions.filter(a => a.status === 'À faire').length;
+  const wip  = actions.filter(a => a.status === 'En cours').length;
+  const done = actions.filter(a => a.status === 'Terminé').length;
+  const bloc = actions.filter(a => a.status === 'Bloqué').length;
+  document.getElementById('actions-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-value" style="color:var(--status-todo)">${todo}</div><div class="stat-label">À faire</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--status-wip)">${wip}</div><div class="stat-label">En cours</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--accent3)">${bloc}</div><div class="stat-label">Bloqué</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--status-done)">${done}</div><div class="stat-label">Terminé</div></div>`;
+  // Build assignees list
+  const assignees = [...new Set(actions.map(a => a.assignee).filter(Boolean))].sort();
+  const sel = document.getElementById('filter-action-assignee');
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">Tous les responsables</option>` + assignees.map(a => `<option ${a===cur?'selected':''}>${a}</option>`).join('');
+  filterActions();
+}
+
+function filterActions() {
+  const search   = document.getElementById('actions-search')?.value.toLowerCase() || '';
+  const statusF  = document.getElementById('filter-action-status')?.value || '';
+  const assigneeF= document.getElementById('filter-action-assignee')?.value || '';
+  const priorityF= document.getElementById('filter-action-priority')?.value || '';
+  let actions = STATE.actionItems.filter(a => {
+    if (statusF && a.status !== statusF) return false;
+    if (assigneeF && a.assignee !== assigneeF) return false;
+    if (priorityF && a.priority !== priorityF) return false;
+    if (search && !a.title?.toLowerCase().includes(search) && !a.assignee?.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  actions.sort((a, b) => {
+    const prio = { 'Haute': 0, 'Moyenne': 1, 'Basse': 2 };
+    return (prio[a.priority]||1) - (prio[b.priority]||1);
+  });
+  const el = document.getElementById('actions-list');
+  if (!actions.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><h3>Aucune action</h3><p>Créez des actions depuis vos réunions</p></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="actions-list">${actions.map(a => renderActionRow(a)).join('')}</div>`;
+}
+
+function renderActionRow(a) {
+  const meeting = STATE.meetings.find(m => m.id === a.meeting_id);
+  const isLate = a.due_date && new Date(a.due_date*1000) < new Date() && !['Terminé','Annulé'].includes(a.status);
+  return `<div class="action-row" id="action-row-${a.id}">
+    <div>
+      <div class="action-title">${a.title||'Sans titre'}</div>
+      <div class="action-meta">
+        👤 ${a.assignee||'—'} 
+        ${a.due_date ? ` · 📅 <span style="color:${isLate?'var(--accent3)':'var(--text-muted)'}">${fmtDate(a.due_date)}</span>` : ''}
+        ${meeting ? ` · 🗂 ${meeting.title}` : ''}
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar" style="width:${a.progress_pct||0}%"></div></div>
+    </div>
+    ${priorityBadge(a.priority||'Moyenne')}
+    ${actionStatusBadge(a.status||'À faire')}
+    <div style="display:flex;gap:.3rem">
+      <button class="btn-icon" onclick="editAction(${a.id})" title="Modifier">✎</button>
+      <button class="btn-icon" style="color:var(--accent3)" onclick="deleteAction(${a.id})" title="Supprimer">✕</button>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// TIMELINE
+// ══════════════════════════════════════════════════════
+function renderTimeline() {
+  const meetings = [...STATE.meetings].sort((a, b) => (b.date||0) - (a.date||0));
+  const el = document.getElementById('timeline-content');
+  if (!meetings.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><h3>Aucune réunion</h3></div>`;
+    return;
+  }
+  el.innerHTML = meetings.map((m, i) => {
+    const actions = STATE.actionItems.filter(a => a.meeting_id === m.id);
+    const open = actions.filter(a => !['Terminé','Annulé'].includes(a.status));
+    const done = actions.filter(a => a.status === 'Terminé');
+    return `<div class="timeline-item">
+      <div class="timeline-line">
+        <div class="timeline-dot" style="background:${m.status==='Terminée'?'var(--accent2)':m.status==='En cours'?'var(--accent)':'var(--border)'}"></div>
+        ${i < meetings.length-1 ? '<div class="timeline-connector"></div>' : ''}
+      </div>
+      <div class="timeline-card" onclick="openDetail(${m.id})">
+        <h4>${m.title||'Réunion'}</h4>
+        <div class="tc-meta">${fmtDate(m.date)}${m.facilitator?' · '+m.facilitator:''}</div>
+        <div class="tc-footer">
+          ${statusBadge(m.status||'Planifiée')}
+          ${open.length?`<span class="badge badge-todo">${open.length} action${open.length>1?'s':''} ouvertes</span>`:''}
+          ${done.length?`<span class="badge badge-done">${done.length} terminées</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// TAB SWITCHING (main)
+// ══════════════════════════════════════════════════════
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab)?.classList.add('active');
+  if (tab === 'actions') renderActionsPanel();
+  if (tab === 'timeline') renderTimeline();
+}
+
+// ══════════════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openNewMeetingModal() {
+  STATE.editMeetingId = null;
+  document.getElementById('modal-meeting-title').textContent = 'Nouvelle réunion';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-status').value = 'Planifiée';
+  document.getElementById('f-time-start').value = '';
+  document.getElementById('f-time-end').value = '';
+  document.getElementById('f-location').value = '';
+  document.getElementById('f-facilitator').value = '';
+  document.getElementById('f-secretary').value = '';
+  document.getElementById('f-notes').value = '';
+  openModal('modal-meeting');
+}
+
+function editCurrentMeeting() {
+  const m = STATE.meetings.find(x => x.id === STATE.currentMeetingId);
+  if (!m) return;
+  STATE.editMeetingId = m.id;
+  document.getElementById('modal-meeting-title').textContent = 'Modifier la réunion';
+  document.getElementById('f-title').value = m.title || '';
+  document.getElementById('f-date').value = fmtDateInput(m.date);
+  document.getElementById('f-status').value = m.status || 'Planifiée';
+  document.getElementById('f-time-start').value = m.time_start || '';
+  document.getElementById('f-time-end').value = m.time_end || '';
+  document.getElementById('f-location').value = m.location || '';
+  document.getElementById('f-facilitator').value = m.facilitator || '';
+  document.getElementById('f-secretary').value = m.secretary || '';
+  document.getElementById('f-notes').value = m.notes || '';
+  openModal('modal-meeting');
+}
+
+async function saveMeeting() {
+  const fields = {
+    title:       document.getElementById('f-title').value.trim(),
+    date:        dateToGrist(document.getElementById('f-date').value),
+    status:      document.getElementById('f-status').value,
+    time_start:  document.getElementById('f-time-start').value,
+    time_end:    document.getElementById('f-time-end').value,
+    location:    document.getElementById('f-location').value,
+    facilitator: document.getElementById('f-facilitator').value,
+    secretary:   document.getElementById('f-secretary').value,
+    notes:       document.getElementById('f-notes').value,
+  };
+  if (!fields.title) { showToast('Le titre est obligatoire', 'error'); return; }
+  try {
+    if (STATE.editMeetingId) {
+      await updateRecord('Meetings', STATE.editMeetingId, fields);
+      showToast('✓ Réunion modifiée', 'success');
+    } else {
+      await addRecord('Meetings', fields);
+      showToast('✓ Réunion créée', 'success');
     }
+    closeModal('modal-meeting');
+    await loadAll();
+    renderMeetings();
+    if (STATE.currentMeetingId) { openDetail(STATE.currentMeetingId); }
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+}
 
-    if (!cr?.trim() && attIds.length === 0) {
-      html += `<div class="no-results" style="padding:40px 0;color:var(--text-muted);font-size:13px;">
-        Aucun compte rendu ni pièce jointe pour cette réunion.</div>`;
+function openNewAgendaModal() {
+  STATE.editAgendaId = null;
+  const count = STATE.agendaItems.filter(a => a.meeting_id === STATE.currentMeetingId).length;
+  document.getElementById('fa-order').value = count + 1;
+  document.getElementById('fa-type').value = 'Discussion';
+  document.getElementById('fa-title').value = '';
+  document.getElementById('fa-presenter').value = '';
+  document.getElementById('fa-duration').value = '15';
+  document.getElementById('fa-description').value = '';
+  document.getElementById('fa-summary').value = '';
+  document.getElementById('fa-decision').value = '';
+  openModal('modal-agenda');
+}
+
+function editAgendaItem(id) {
+  const item = STATE.agendaItems.find(a => a.id === id);
+  if (!item) return;
+  STATE.editAgendaId = id;
+  document.getElementById('fa-order').value = item.order_num || 1;
+  document.getElementById('fa-type').value = item.type || 'Discussion';
+  document.getElementById('fa-title').value = item.title || '';
+  document.getElementById('fa-presenter').value = item.presenter || '';
+  document.getElementById('fa-duration').value = item.duration_min || 15;
+  document.getElementById('fa-description').value = item.description || '';
+  document.getElementById('fa-summary').value = item.summary || '';
+  document.getElementById('fa-decision').value = item.decision || '';
+  openModal('modal-agenda');
+}
+
+async function saveAgendaItem() {
+  const fields = {
+    meeting_id:   STATE.currentMeetingId,
+    order_num:    parseInt(document.getElementById('fa-order').value),
+    type:         document.getElementById('fa-type').value,
+    title:        document.getElementById('fa-title').value.trim(),
+    presenter:    document.getElementById('fa-presenter').value,
+    duration_min: parseInt(document.getElementById('fa-duration').value),
+    description:  document.getElementById('fa-description').value,
+    summary:      document.getElementById('fa-summary').value,
+    decision:     document.getElementById('fa-decision').value,
+  };
+  if (!fields.title) { showToast('Le titre est obligatoire', 'error'); return; }
+  try {
+    if (STATE.editAgendaId) {
+      await updateRecord('AgendaItems', STATE.editAgendaId, fields);
+      showToast('✓ Point modifié', 'success');
+    } else {
+      await addRecord('AgendaItems', fields);
+      showToast('✓ Point ajouté', 'success');
     }
+    closeModal('modal-agenda');
+    await loadAll();
+    renderDetailODJ();
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+}
 
-    panel.innerHTML = html;
-  }
+async function deleteAgendaItem(id) {
+  if (!confirm('Supprimer ce point ?')) return;
+  try {
+    await deleteRecord('AgendaItems', id);
+    await loadAll();
+    renderDetailODJ();
+    showToast('✓ Point supprimé', 'success');
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+}
 
-  /* ══════════════════════════════════════════
-     QUILL DELTA → HTML
-  ══════════════════════════════════════════ */
-  function deltaToHtml(raw) {
-    let delta;
-    if (typeof raw === 'string') {
-      const t = raw.trim();
-      if (!t) return '';
-      if (t.startsWith('{') || t.startsWith('[')) {
-        try { delta = JSON.parse(t); }
-        catch(e) { return raw.split('\n').map(l=>`<p>${escapeHtml(l)}</p>`).join(''); }
-      } else {
-        return raw.split('\n').map(l=>`<p>${escapeHtml(l)}</p>`).join('');
-      }
-    } else { delta = raw; }
+async function saveAgendaSummary(id, val) {
+  try { await updateRecord('AgendaItems', id, { summary: val }); const i = STATE.agendaItems.find(a=>a.id===id); if(i) i.summary=val; }
+  catch(e) { showToast('Erreur sauvegarde', 'error'); }
+}
+async function saveAgendaDecision(id, val) {
+  try { await updateRecord('AgendaItems', id, { decision: val }); const i = STATE.agendaItems.find(a=>a.id===id); if(i) i.decision=val; }
+  catch(e) { showToast('Erreur sauvegarde', 'error'); }
+}
 
-    const ops = delta.ops || (Array.isArray(delta) ? delta : []);
-    if (!ops.length) return '';
+function toggleAgenda(id) {
+  document.getElementById('agenda-' + id)?.classList.toggle('expanded');
+}
 
-    const lines = [];
-    let cur = { segments:[], lineAttrs:{} };
-    ops.forEach(op => {
-      if (typeof op.insert !== 'string') return;
-      op.insert.split('\n').forEach((part,i,arr) => {
-        if (part) cur.segments.push({ text:part, attrs:op.attributes||{} });
-        if (i < arr.length-1) { cur.lineAttrs = op.attributes||{}; lines.push(cur); cur={segments:[],lineAttrs:{}}; }
-      });
-    });
-    if (cur.segments.length) lines.push(cur);
+function openNewActionModal(agendaItemId) {
+  STATE.editActionId = null;
+  document.getElementById('modal-action-title').textContent = 'Nouvelle action';
+  document.getElementById('fac-title').value = '';
+  document.getElementById('fac-assignee').value = '';
+  document.getElementById('fac-due').value = '';
+  document.getElementById('fac-priority').value = 'Moyenne';
+  document.getElementById('fac-status').value = 'À faire';
+  document.getElementById('fac-progress').value = 0;
+  document.getElementById('fac-pct-label').textContent = '0';
+  document.getElementById('fac-notes').value = '';
+  // Populate agenda items
+  const items = STATE.agendaItems.filter(a => a.meeting_id === STATE.currentMeetingId);
+  const sel = document.getElementById('fac-agenda-item');
+  sel.innerHTML = `<option value="">— Aucun —</option>` + items.map(i => `<option value="${i.id}" ${i.id===agendaItemId?'selected':''}>${i.order_num}. ${i.title}</option>`).join('');
+  openModal('modal-action');
+}
 
-    let html='', listStack=[];
-    const closeLists=()=>{ while(listStack.length){ const t=listStack.pop(); html+=t==='bullet'?'</ul>':'</ol>'; } };
-    const segsToHtml=segs=>segs.map(({text,attrs})=>{
-      let s=escapeHtml(text);
-      if (attrs.bold)      s=`<strong>${s}</strong>`;
-      if (attrs.italic)    s=`<em>${s}</em>`;
-      if (attrs.underline) s=`<u>${s}</u>`;
-      if (attrs.strike)    s=`<s>${s}</s>`;
-      if (attrs.code)      s=`<code>${s}</code>`;
-      if (attrs.link)      s=`<a href="${escapeHtml(attrs.link)}" target="_blank" style="color:var(--accent2)">${s}</a>`;
-      return s;
-    }).join('');
+function editAction(id) {
+  const a = STATE.actionItems.find(x => x.id === id);
+  if (!a) return;
+  STATE.editActionId = id;
+  STATE.currentMeetingId = a.meeting_id || STATE.currentMeetingId;
+  document.getElementById('modal-action-title').textContent = 'Modifier l\'action';
+  document.getElementById('fac-title').value = a.title || '';
+  document.getElementById('fac-assignee').value = a.assignee || '';
+  document.getElementById('fac-due').value = fmtDateInput(a.due_date);
+  document.getElementById('fac-priority').value = a.priority || 'Moyenne';
+  document.getElementById('fac-status').value = a.status || 'À faire';
+  document.getElementById('fac-progress').value = a.progress_pct || 0;
+  document.getElementById('fac-pct-label').textContent = a.progress_pct || 0;
+  document.getElementById('fac-notes').value = a.notes || '';
+  const items = STATE.agendaItems.filter(ai => ai.meeting_id === STATE.currentMeetingId);
+  const sel = document.getElementById('fac-agenda-item');
+  sel.innerHTML = `<option value="">— Aucun —</option>` + items.map(i => `<option value="${i.id}" ${i.id===a.agenda_item_id?'selected':''}>${i.order_num}. ${i.title}</option>`).join('');
+  openModal('modal-action');
+}
 
-    lines.forEach(({segments,lineAttrs})=>{
-      const content  = segsToHtml(segments);
-      const listType = lineAttrs.list;
-      const header   = lineAttrs.header;
-      if (listType) {
-        const type = listType==='ordered'?'ordered':'bullet';
-        const tag  = type==='ordered'?'ol':'ul';
-        if (!listStack.length || listStack[listStack.length-1]!==type) {
-          if (listStack.length && listStack[listStack.length-1]!==type) { const p=listStack.pop(); html+=p==='bullet'?'</ul>':'</ol>'; }
-          html+=`<${tag}>`; listStack.push(type);
-        }
-        html+=`<li>${content}</li>`;
-      } else {
-        closeLists();
-        if (header)              html+=`<h${header}>${content}</h${header}>`;
-        else if (lineAttrs.blockquote) html+=`<blockquote>${content}</blockquote>`;
-        else                     html+=`<p>${content}</p>`;
-      }
-    });
-    closeLists();
-    return html;
-  }
-
-  /* ══════════════════════════════════════════
-     OPEN ATTACHMENT
-     attId = numeric Grist attachment ID
-  ══════════════════════════════════════════ */
-  async function openAttachment(attId, filename, isPdf) {
-    const url = await resolveAttUrl(attId);
-    if (!url) { alert("Impossible de résoudre l'URL du fichier. Vérifiez les permissions."); return; }
-    if (isPdf) openPdfModal(url, filename);
-    else       window.open(url, '_blank');
-  }
-
-  async function resolveAttUrl(attId) {
-    // Method 1 : Grist plugin API (preferred for custom widgets)
-    try {
-      const url = await grist.docApi.getAttachmentDownloadUrl(attId);
-      if (url) return url;
-    } catch(e) {}
-
-    // Method 2 : REST API with access token
-    try {
-      const tokenObj = await grist.docApi.getAccessToken({ readOnly: true });
-      const token    = tokenObj.token || tokenObj;
-      const docId    = await grist.getDocName();
-      return `${window.location.origin}/api/docs/${docId}/attachments/${attId}/download?auth=${token}`;
-    } catch(e) {}
-
-    return null;
-  }
-
-  /* ══════════════════════════════════════════
-     PDF MODAL
-  ══════════════════════════════════════════ */
-  function openPdfModal(url, filename) {
-    currentPdfUrl = url;
-    document.getElementById('pdfModalTitle').textContent = filename;
-    document.getElementById('pdfLoading').classList.remove('hidden');
-    // Remove any stale error
-    const old = document.querySelector('.pdf-modal-body .pdf-error');
-    if (old) old.remove();
-
-    const iframe = document.getElementById('pdfIframe');
-    iframe.src = '';
-    setTimeout(() => { iframe.src = url + '#toolbar=1&navpanes=0&scrollbar=1'; }, 60);
-
-    document.getElementById('pdfOverlay').classList.add('open');
-    document.addEventListener('keydown', onModalKeydown);
-  }
-
-  function closePdfModal(event) {
-    if (event && event.target !== document.getElementById('pdfOverlay')) return;
-    _doClose();
-  }
-  function _doClose() {
-    document.getElementById('pdfOverlay').classList.remove('open');
-    setTimeout(() => { document.getElementById('pdfIframe').src=''; currentPdfUrl=null; }, 280);
-    document.removeEventListener('keydown', onModalKeydown);
-  }
-  function onModalKeydown(e) { if (e.key==='Escape') _doClose(); }
-
-  function onIframeLoad() {
-    document.getElementById('pdfLoading').classList.add('hidden');
-  }
-  function onIframeError() {
-    document.getElementById('pdfLoading').classList.add('hidden');
-    const body = document.querySelector('.pdf-modal-body');
-    if (!body.querySelector('.pdf-error')) {
-      const err = document.createElement('div');
-      err.className = 'pdf-error';
-      err.innerHTML = `<div class="pdf-error-icon">⚠️</div>
-        <p>Impossible d'afficher ce PDF dans le navigateur.</p>
-        <button class="btn-modal" onclick="downloadCurrentPdf()" style="margin-top:8px">⬇ Télécharger à la place</button>
-        <small>Cela peut arriver selon les restrictions CORS de votre instance Grist.</small>`;
-      body.appendChild(err);
+async function saveAction() {
+  const agendaSel = parseInt(document.getElementById('fac-agenda-item').value) || null;
+  const agendaItem = agendaSel ? STATE.agendaItems.find(a => a.id === agendaSel) : null;
+  const meetingId = agendaItem?.meeting_id || STATE.currentMeetingId || null;
+  const fields = {
+    title:         document.getElementById('fac-title').value.trim(),
+    assignee:      document.getElementById('fac-assignee').value.trim(),
+    due_date:      dateToGrist(document.getElementById('fac-due').value),
+    priority:      document.getElementById('fac-priority').value,
+    status:        document.getElementById('fac-status').value,
+    progress_pct:  parseInt(document.getElementById('fac-progress').value),
+    notes:         document.getElementById('fac-notes').value,
+    agenda_item_id: agendaSel,
+    meeting_id:    meetingId,
+  };
+  if (!fields.title) { showToast('La description est obligatoire', 'error'); return; }
+  try {
+    if (STATE.editActionId) {
+      await updateRecord('ActionItems', STATE.editActionId, fields);
+      showToast('✓ Action modifiée', 'success');
+    } else {
+      await addRecord('ActionItems', fields);
+      showToast('✓ Action créée', 'success');
     }
-  }
-  function downloadCurrentPdf() { if (currentPdfUrl) window.open(currentPdfUrl,'_blank'); }
+    closeModal('modal-action');
+    await loadAll();
+    if (STATE.currentDetailTab === 'actions-detail') renderDetailActions();
+    if (STATE.currentDetailTab === 'odj') renderDetailODJ();
+    renderActionsPanel();
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+async function deleteAction(id) {
+  if (!confirm('Supprimer cette action ?')) return;
+  try {
+    await deleteRecord('ActionItems', id);
+    await loadAll();
+    renderDetailActions();
+    renderActionsPanel();
+    showToast('✓ Action supprimée', 'success');
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+async function toggleCRValidated(val) {
+  if (!STATE.currentMeetingId) return;
+  try {
+    await updateRecord('Meetings', STATE.currentMeetingId, { minutes_validated: val });
+    const m = STATE.meetings.find(x => x.id === STATE.currentMeetingId);
+    if (m) m.minutes_validated = val;
+    showToast(val ? '✓ CR marqué comme validé' : 'CR marqué non validé', 'success');
+  } catch(e) { showToast('Erreur', 'error'); }
+}
+
+function openParticipantModal() {
+  document.getElementById('fp-name').value = '';
+  document.getElementById('fp-email').value = '';
+  document.getElementById('fp-role').value = 'Invité';
+  document.getElementById('fp-present').value = '1';
+  openModal('modal-participant');
+}
+
+async function saveParticipant() {
+  const fields = {
+    meeting_id: STATE.currentMeetingId,
+    name:    document.getElementById('fp-name').value.trim(),
+    email:   document.getElementById('fp-email').value.trim(),
+    role:    document.getElementById('fp-role').value,
+    present: document.getElementById('fp-present').value === '1',
+  };
+  if (!fields.name) { showToast('Le nom est obligatoire', 'error'); return; }
+  try {
+    await addRecord('Participants', fields);
+    closeModal('modal-participant');
+    await loadAll();
+    renderDetailParticipants();
+    showToast('✓ Participant ajouté', 'success');
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+async function deleteParticipant(id) {
+  if (!confirm('Supprimer ce participant ?')) return;
+  try {
+    await deleteRecord('Participants', id);
+    await loadAll();
+    renderDetailParticipants();
+    showToast('✓ Supprimé', 'success');
+  } catch(e) { showToast('Erreur', 'error'); }
+}
+
+// ══════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════
+let toastTimeout;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type;
+  t.style.display = 'flex';
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// ══════════════════════════════════════════════════════
+// DÉMARRAGE
+// ══════════════════════════════════════════════════════
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// Lancer l'initialisation
+initWidget();
 </script>
-<!-- PDF MODAL -->
-<div class="pdf-overlay" id="pdfOverlay" onclick="closePdfModal(event)">
-  <div class="pdf-modal" id="pdfModal">
-    <div class="pdf-modal-header">
-      <span class="pdf-modal-icon">📄</span>
-      <span class="pdf-modal-title" id="pdfModalTitle">Document PDF</span>
-      <div class="pdf-modal-actions">
-        <button class="btn-modal" id="btnDownload" onclick="downloadCurrentPdf()">
-          ⬇ Télécharger
-        </button>
-        <button class="btn-modal btn-modal-close" onclick="closePdfModal()">
-          ✕ Fermer
-        </button>
-      </div>
-    </div>
-    <div class="pdf-modal-body">
-      <div class="pdf-loading" id="pdfLoading">
-        <div class="spinner"></div>
-        <span>Chargement du PDF…</span>
-      </div>
-      <iframe class="pdf-iframe" id="pdfIframe" title="Visualisation PDF"
-        onload="onIframeLoad()" onerror="onIframeError()">
-      </iframe>
-    </div>
-  </div>
-</div>
-
-
+</body>
 </html>

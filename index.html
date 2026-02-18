@@ -1,1234 +1,846 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion Quotidien</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #0A2463;
-            --primary-light: #1E3A8A;
-            --accent: #FB8500;
-            --accent-light: #FFB703;
-            --success: #06D6A0;
-            --danger: #EF476F;
-            --bg-main: #F8FAFC;
-            --bg-card: #FFFFFF;
-            --text-primary: #1E293B;
-            --text-secondary: #64748B;
-            --border: #E2E8F0;
-            --shadow-sm: 0 1px 3px rgba(10, 36, 99, 0.05);
-            --shadow-md: 0 4px 12px rgba(10, 36, 99, 0.08);
-            --shadow-lg: 0 10px 40px rgba(10, 36, 99, 0.12);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: var(--bg-main);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        .container {
-            max-width: 1800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Header avec animation */
-        .header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            padding: 30px 40px;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(255, 183, 3, 0.15) 0%, transparent 70%);
-            border-radius: 50%;
-            animation: float 8s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(-30px, -30px) scale(1.1); }
-        }
-
-        .header-content {
-            position: relative;
-            z-index: 1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header h1 {
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .header-stats {
-            display: flex;
-            gap: 30px;
-        }
-
-        .stat-item {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 12px 24px;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .stat-value {
-            display: block;
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--accent-light);
-        }
-
-        .stat-label {
-            display: block;
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.8);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 4px;
-        }
-
-        /* Actions Bar */
-        .actions-bar {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-family: 'Outfit', sans-serif;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
-            color: white;
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(251, 133, 0, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--bg-card);
-            color: var(--text-primary);
-            border: 2px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .search-box {
-            flex: 1;
-            max-width: 400px;
-            position: relative;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 12px 45px 12px 20px;
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            font-size: 14px;
-            font-family: 'Outfit', sans-serif;
-            transition: all 0.3s;
-            background: var(--bg-card);
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(10, 36, 99, 0.1);
-        }
-
-        .search-icon {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-        }
-
-        /* Filters */
-        .filters {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .filter-chip {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid var(--border);
-            background: var(--bg-card);
-            color: var(--text-secondary);
-        }
-
-        .filter-chip:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .filter-chip.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        /* Table View */
-        .table-container {
-            background: var(--bg-card);
-            border-radius: 16px;
-            box-shadow: var(--shadow-md);
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        thead {
-            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
-            border-bottom: 2px solid var(--border);
-        }
-
-        th {
-            padding: 18px 20px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            user-select: none;
-            position: relative;
-        }
-
-        th:hover {
-            background: rgba(10, 36, 99, 0.05);
-        }
-
-        td {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-        }
-
-        tbody tr {
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        tbody tr:hover {
-            background: rgba(251, 133, 0, 0.03);
-            transform: scale(1.001);
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        .status-particulier {
-            background: rgba(6, 214, 160, 0.1);
-            color: var(--success);
-        }
-
-        .status-professionnel {
-            background: rgba(251, 133, 0, 0.1);
-            color: var(--accent);
-        }
-
-        .status-association {
-            background: rgba(10, 36, 99, 0.1);
-            color: var(--primary);
-        }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(10, 36, 99, 0.4);
-            backdrop-filter: blur(5px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            animation: fadeIn 0.3s;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal {
-            background: var(--bg-card);
-            border-radius: 24px;
-            max-width: 900px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: var(--shadow-lg);
-            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .modal-header {
-            padding: 30px 40px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h2 {
-            font-size: 24px;
-            font-weight: 700;
-        }
-
-        .close-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.2s;
-        }
-
-        .close-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: rotate(90deg);
-        }
-
-        .modal-body {
-            padding: 40px;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-        label {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-            font-size: 14px;
-        }
-
-        input, select, textarea {
-            padding: 12px 16px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            font-size: 14px;
-            font-family: 'Outfit', sans-serif;
-            transition: all 0.3s;
-            background: var(--bg-card);
-        }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(10, 36, 99, 0.1);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .modal-footer {
-            padding: 25px 40px;
-            background: var(--bg-main);
-            display: flex;
-            gap: 15px;
-            justify-content: flex-end;
-            border-top: 1px solid var(--border);
-        }
-
-        .btn-cancel {
-            background: transparent;
-            color: var(--text-secondary);
-            border: 2px solid var(--border);
-        }
-
-        .btn-cancel:hover {
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        .btn-save {
-            background: linear-gradient(135deg, var(--success) 0%, #05B894 100%);
-            color: white;
-        }
-
-        .btn-save:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(6, 214, 160, 0.3);
-        }
-
-        .btn-delete {
-            background: linear-gradient(135deg, var(--danger) 0%, #D83654 100%);
-            color: white;
-            margin-right: auto;
-        }
-
-        .btn-delete:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(239, 71, 111, 0.3);
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 80px 40px;
-        }
-
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
-
-        .empty-state h3 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: var(--text-primary);
-        }
-
-        .empty-state p {
-            color: var(--text-secondary);
-            margin-bottom: 25px;
-        }
-
-        /* Loading State */
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 40px;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--border);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .header-content {
-                flex-direction: column;
-                gap: 20px;
-            }
-
-            .header-stats {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .actions-bar {
-                flex-direction: column;
-            }
-
-            .search-box {
-                max-width: 100%;
-            }
-        }
-
-        /* Scroll bar personnalisé */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-main);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-secondary);
-        }
-
-        .delay-badge {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 500;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-        }
-
-        .delay-fast {
-            background: rgba(6, 214, 160, 0.1);
-            color: var(--success);
-        }
-
-        .delay-medium {
-            background: rgba(251, 133, 0, 0.1);
-            color: var(--accent);
-        }
-
-        .delay-slow {
-            background: rgba(239, 71, 111, 0.1);
-            color: var(--danger);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Réunions</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2436;
+    --border: #2a3050;
+    --accent: #c9a84c;
+    --accent2: #e8c87a;
+    --text: #e8eaf0;
+    --text-muted: #7a82a0;
+    --text-light: #adb5cc;
+    --danger: #e05c5c;
+    --success: #5cba8a;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --shadow-lg: 0 12px 48px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .header-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-title::before {
+    content: '';
+    width: 4px;
+    height: 22px;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .control-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  select, input[type="text"] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  select:hover, input[type="text"]:hover { border-color: var(--accent); }
+  select:focus, input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(201,168,76,0.15); }
+
+  .search-box {
+    width: 200px;
+    padding-left: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%237a82a0' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.44 1.346a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 10px center;
+  }
+
+  .count-badge {
+    background: rgba(201,168,76,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(201,168,76,0.3);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── LIST PANEL ── */
+  .list-panel {
+    width: 380px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .list-panel::-webkit-scrollbar { width: 4px; }
+  .list-panel::-webkit-scrollbar-track { background: transparent; }
+  .list-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── GROUP HEADER ── */
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 12px 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .group-toggle {
+    color: var(--text-muted);
+    font-size: 11px;
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+
+  .group-toggle.collapsed { transform: rotate(-90deg); }
+
+  .group-name {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    flex: 1;
+  }
+
+  .group-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 7px;
+    border-radius: 10px;
+  }
+
+  .group-items { display: flex; flex-direction: column; gap: 2px; }
+  .group-items.collapsed { display: none; }
+
+  /* ── MEETING CARD ── */
+  .meeting-card {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.18s;
+    border: 1px solid transparent;
+    background: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .meeting-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: transparent;
+    border-radius: 2px 0 0 2px;
+    transition: background 0.18s;
+  }
+
+  .meeting-card:hover {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  .meeting-card.active {
+    background: var(--surface2);
+    border-color: rgba(201,168,76,0.4);
+  }
+
+  .meeting-card.active::before { background: var(--accent); }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+
+  .card-objet {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .card-date {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .type-pill {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .card-indicators {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .indicator {
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--text-muted);
+    padding: 2px 6px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 4px;
+  }
+
+  .indicator.has-cr { color: var(--success); }
+  .indicator.has-pdf { color: #7ab3e0; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .detail-panel::-webkit-scrollbar { width: 4px; }
+  .detail-panel::-webkit-scrollbar-track { background: transparent; }
+  .detail-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    opacity: 0.3;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  /* ── DETAIL HEADER ── */
+  .detail-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-type-date {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .detail-type-pill {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .detail-date {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .detail-objet {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.25;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── COMPTE RENDU ── */
+  .cr-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text-light);
+    white-space: pre-wrap;
+    font-family: 'DM Sans', sans-serif;
+    max-height: 350px;
+    overflow-y: auto;
+  }
+
+  .cr-box::-webkit-scrollbar { width: 4px; }
+  .cr-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── ATTACHMENTS ── */
+  .attachments-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: all 0.18s;
+  }
+
+  .attachment-item:hover {
+    border-color: rgba(122,179,224,0.5);
+    background: var(--surface2);
+  }
+
+  .attachment-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: rgba(122,179,224,0.1);
+    flex-shrink: 0;
+  }
+
+  .attachment-info { flex: 1; min-width: 0; }
+
+  .attachment-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .attachment-size {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .btn-open {
+    background: rgba(122,179,224,0.12);
+    border: 1px solid rgba(122,179,224,0.3);
+    color: #7ab3e0;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+
+  .btn-open:hover {
+    background: rgba(122,179,224,0.22);
+    border-color: rgba(122,179,224,0.6);
+  }
+
+  /* ── LOADING / ERROR ── */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 14px;
+    gap: 10px;
+  }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .no-results {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ── SCROLLBARS global ── */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+  /* ── ANIMATIONS ── */
+  .meeting-card { animation: fadeIn 0.15s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .detail-panel > * { animation: slideIn 0.2s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="header-content">
-                <h1>📊 Gestion des Demandes Quotidiennes</h1>
-                <div class="header-stats">
-                    <div class="stat-item">
-                        <span class="stat-value" id="totalCount">0</span>
-                        <span class="stat-label">Total</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="avgDelay">—</span>
-                        <span class="stat-label">Délai Moyen</span>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="actions-bar">
-            <button class="btn btn-primary" onclick="openModal()">
-                <span>➕</span> Nouvelle Demande
-            </button>
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Rechercher..." onkeyup="filterData()">
-                <span class="search-icon">🔍</span>
-            </div>
-            <button class="btn btn-secondary" onclick="refreshData()">
-                <span>🔄</span> Actualiser
-            </button>
-        </div>
-
-        <div class="filters">
-            <div class="filter-chip active" data-status="all" onclick="filterByStatus('all')">Tous</div>
-            <div class="filter-chip" data-status="particulier" onclick="filterByStatus('particulier')">Particuliers</div>
-            <div class="filter-chip" data-status="professionnel" onclick="filterByStatus('professionnel')">Professionnels</div>
-            <div class="filter-chip" data-status="association" onclick="filterByStatus('association')">Associations</div>
-        </div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Chargement des données...</p>
-        </div>
-
-        <div class="table-container" id="tableContainer">
-            <div class="table-wrapper">
-                <table id="dataTable">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable(0)">Date Demande</th>
-                            <th onclick="sortTable(1)">Statut</th>
-                            <th onclick="sortTable(2)">Nom</th>
-                            <th onclick="sortTable(3)">Sujet</th>
-                            <th onclick="sortTable(4)">Direction</th>
-                            <th onclick="sortTable(5)">Service</th>
-                            <th onclick="sortTable(6)">Délai</th>
-                            <th onclick="sortTable(7)">Date Réponse</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Data will be inserted here -->
-                    </tbody>
-                </table>
-            </div>
-            <div class="empty-state" id="emptyState" style="display: none;">
-                <div class="empty-state-icon">📭</div>
-                <h3>Aucune demande</h3>
-                <p>Commencez par ajouter votre première demande</p>
-                <button class="btn btn-primary" onclick="openModal()">
-                    <span>➕</span> Ajouter une demande
-                </button>
-            </div>
-        </div>
+<div class="header">
+  <div class="header-title">Réunions</div>
+  <div class="header-controls">
+    <input type="text" class="search-box" id="searchInput" placeholder="Rechercher…" oninput="render()">
+    <div class="control-group">
+      <span class="control-label">Grouper</span>
+      <select id="groupBy" onchange="render()">
+        <option value="none">Aucun</option>
+        <option value="type" selected>Par type</option>
+        <option value="month">Par mois</option>
+        <option value="year">Par année</option>
+      </select>
     </div>
-
-    <!-- Modal -->
-    <div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
-        <div class="modal" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h2 id="modalTitle">Nouvelle Demande</h2>
-                <button class="close-btn" onclick="closeModal()">✕</button>
-            </div>
-            <div class="modal-body">
-                <form id="demandForm" class="form-grid">
-                    <div class="form-group">
-                        <label for="date_demande">Date de Demande *</label>
-                        <input type="date" id="date_demande" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="statut">Statut *</label>
-                        <select id="statut" required>
-                            <option value="">-- Sélectionner --</option>
-                            <option value="particulier">Particulier</option>
-                            <option value="professionnel">Professionnel</option>
-                            <option value="association">Association</option>
-                        </select>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="nom">Nom et Prénom *</label>
-                        <input type="text" id="nom" placeholder="Ex: Dupont Jean" required>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="sujet">Sujet de la Demande *</label>
-                        <textarea id="sujet" placeholder="Décrivez brièvement l'objet de la demande..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="direction">Direction *</label>
-                        <select id="direction" onchange="updateServices()" required>
-                            <option value="">-- Sélectionner --</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="service">Service *</label>
-                        <select id="service" onchange="updateMail()" required>
-                            <option value="">-- Sélectionner une direction d'abord --</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="date_charge">Date de Prise en Charge</label>
-                        <input type="date" id="date_charge">
-                    </div>
-                    <div class="form-group">
-                        <label for="date_reponse">Date de Réponse</label>
-                        <input type="date" id="date_reponse">
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="mail">Mail de Contact</label>
-                        <input type="email" id="mail" readonly placeholder="Sera rempli automatiquement">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-delete" id="deleteBtn" onclick="deleteRecord()" style="display: none;">
-                    <span>🗑️</span> Supprimer
-                </button>
-                <button class="btn btn-cancel" onclick="closeModal()">Annuler</button>
-                <button class="btn btn-save" onclick="saveRecord()">
-                    <span>💾</span> Enregistrer
-                </button>
-            </div>
-        </div>
+    <div class="control-group">
+      <span class="control-label">Tri</span>
+      <select id="sortOrder" onchange="render()">
+        <option value="desc">Plus récent</option>
+        <option value="asc">Plus ancien</option>
+      </select>
     </div>
+    <div class="count-badge" id="countBadge">0</div>
+  </div>
+</div>
 
-    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-    <script>
-        grist.ready();
+<div class="main">
+  <div class="list-panel" id="listPanel">
+    <div class="loading"><div class="spinner"></div> Chargement…</div>
+  </div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <p>Sélectionnez une réunion<br>pour afficher son détail</p>
+    </div>
+  </div>
+</div>
 
-        let currentData = [];
-        let allDirections = [];
-        let allServices = [];
-        let currentFilter = 'all';
-        let editingRowId = null;
+<script>
+  /* ── STATE ── */
+  let allRecords = [];
+  let selectedId = null;
+  let collapsedGroups = new Set();
+  let typeColors = {};
+  const PALETTE = [
+    ['rgba(201,168,76,0.15)', '#c9a84c'],
+    ['rgba(92,186,138,0.15)', '#5cba8a'],
+    ['rgba(122,179,224,0.15)', '#7ab3e0'],
+    ['rgba(224,92,92,0.15)', '#e05c5c'],
+    ['rgba(180,122,224,0.15)', '#b47ae0'],
+    ['rgba(224,160,92,0.15)', '#e0a05c'],
+    ['rgba(92,180,224,0.15)', '#5cb4e0'],
+    ['rgba(224,200,92,0.15)', '#e0c85c'],
+  ];
+  let paletteIndex = 0;
 
-        // Configuration de l'accès aux données
-        grist.onRecord(function(record) {
-            // Ce widget fonctionne avec la liste complète
-        });
+  function getTypeColor(type) {
+    if (!typeColors[type]) {
+      typeColors[type] = PALETTE[paletteIndex % PALETTE.length];
+      paletteIndex++;
+    }
+    return typeColors[type];
+  }
 
-        // Initialisation
-        async function init() {
-            try {
-                showLoading(true);
-                
-                // Charger les données de référence d'abord
-                await loadDirections();
-                await loadServices();
-                
-                console.log('Directions loaded:', allDirections.length);
-                console.log('Services loaded:', allServices.length);
-                
-                // Puis charger les données principales
-                await loadData();
-                
-                showLoading(false);
-                updateStats();
-            } catch (error) {
-                console.error('Erreur lors de l\'initialisation:', error);
-                showLoading(false);
-                alert('Erreur lors du chargement. Veuillez actualiser la page.');
-            }
-        }
+  /* ── GRIST INIT ── */
+  grist.ready({ requiredAccess: 'read table' });
 
-        // Charger toutes les données de QUOTIDIEN
-        async function loadData() {
-            try {
-                const table = await grist.docApi.fetchTable('QUOTIDIEN');
-                // Transformer les données en format utilisable
-                currentData = [];
-                if (table.id && table.id.length > 0) {
-                    for (let i = 0; i < table.id.length; i++) {
-                        currentData.push({
-                            id: table.id[i],
-                            date_demande: table.date_demande[i],
-                            date_reponse: table.date_reponse[i],
-                            date_charge: table.date_charge[i],
-                            direction: table.direction[i],
-                            service: table.service[i],
-                            statut: table.statut[i],
-                            nom: table.nom[i],
-                            sujet: table.sujet[i],
-                            delai: table.delai[i],
-                            mail: table.mail[i]
-                        });
-                    }
-                }
-                renderTable();
-            } catch (error) {
-                console.error('Erreur lors du chargement des données:', error);
-                console.log('Details:', error);
-            }
-        }
+  grist.onRecords((records) => {
+    allRecords = records;
+    render();
+  });
 
-        // Charger les directions
-        async function loadDirections() {
-            try {
-                const table = await grist.docApi.fetchTable('DIRECTIONS');
-                // Transformer les données en format utilisable
-                allDirections = [];
-                for (let i = 0; i < table.id.length; i++) {
-                    allDirections.push({
-                        id: table.id[i],
-                        direction: table.direction[i]
-                    });
-                }
-                populateDirectionSelect();
-            } catch (error) {
-                console.error('Erreur lors du chargement des directions:', error);
-                console.log('Details:', error);
-            }
-        }
+  grist.onRecord((record) => {
+    // optional: highlight selected record from table
+  });
 
-        // Charger les services
-        async function loadServices() {
-            try {
-                const table = await grist.docApi.fetchTable('SERVICES');
-                // Transformer les données en format utilisable
-                allServices = [];
-                for (let i = 0; i < table.id.length; i++) {
-                    allServices.push({
-                        id: table.id[i],
-                        service: table.service[i],
-                        direction: table.direction[i],
-                        mail: table.mail[i]
-                    });
-                }
-            } catch (error) {
-                console.error('Erreur lors du chargement des services:', error);
-                console.log('Details:', error);
-            }
-        }
+  /* ── HELPERS ── */
+  function formatDate(ts) {
+    if (!ts) return '—';
+    const d = ts > 99999 ? new Date(ts * 1000) : new Date(ts);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
 
-        // Remplir le select des directions
-        function populateDirectionSelect() {
-            const select = document.getElementById('direction');
-            select.innerHTML = '<option value="">-- Sélectionner --</option>';
-            allDirections.forEach(dir => {
-                const option = document.createElement('option');
-                option.value = dir.id;
-                option.textContent = dir.direction || 'Sans nom';
-                select.appendChild(option);
-            });
-        }
+  function formatDateShort(ts) {
+    if (!ts) return '—';
+    const d = ts > 99999 ? new Date(ts * 1000) : new Date(ts);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
 
-        // Mettre à jour les services en fonction de la direction
-        function updateServices() {
-            const directionId = parseInt(document.getElementById('direction').value);
-            const serviceSelect = document.getElementById('service');
-            
-            serviceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-            
-            if (!directionId) {
-                serviceSelect.innerHTML = '<option value="">-- Sélectionner une direction d\'abord --</option>';
-                document.getElementById('mail').value = '';
-                return;
-            }
-            
-            const filteredServices = allServices.filter(s => s.direction === directionId);
-            
-            filteredServices.forEach(service => {
-                const option = document.createElement('option');
-                option.value = service.id;
-                option.textContent = service.service || 'Sans nom';
-                option.dataset.mail = service.mail || '';
-                serviceSelect.appendChild(option);
-            });
-        }
+  function getMonth(ts) {
+    if (!ts) return 'Sans date';
+    const d = ts > 99999 ? new Date(ts * 1000) : new Date(ts);
+    return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  }
 
-        // Mettre à jour le mail en fonction du service
-        function updateMail() {
-            const serviceSelect = document.getElementById('service');
-            const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
-            const mail = selectedOption.dataset.mail || '';
-            document.getElementById('mail').value = mail;
-        }
+  function getYear(ts) {
+    if (!ts) return 'Sans date';
+    const d = ts > 99999 ? new Date(ts * 1000) : new Date(ts);
+    return d.getFullYear().toString();
+  }
 
-        // Afficher les données dans le tableau
-        function renderTable() {
-            const tbody = document.getElementById('tableBody');
-            const emptyState = document.getElementById('emptyState');
-            
-            let filteredData = currentData;
-            
-            // Filtre par statut
-            if (currentFilter !== 'all') {
-                filteredData = filteredData.filter(item => item.statut === currentFilter);
-            }
-            
-            // Filtre par recherche
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            if (searchTerm) {
-                filteredData = filteredData.filter(item => {
-                    const directionName = getDirectionName(item.direction);
-                    const serviceName = getServiceName(item.service);
-                    return (
-                        (item.nom || '').toLowerCase().includes(searchTerm) ||
-                        (item.sujet || '').toLowerCase().includes(searchTerm) ||
-                        (item.statut || '').toLowerCase().includes(searchTerm) ||
-                        directionName.toLowerCase().includes(searchTerm) ||
-                        serviceName.toLowerCase().includes(searchTerm)
-                    );
-                });
-            }
-            
-            if (filteredData.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.style.display = 'block';
-                return;
-            }
-            
-            emptyState.style.display = 'none';
-            
-            tbody.innerHTML = filteredData.map(item => {
-                const directionName = getDirectionName(item.direction);
-                const serviceName = getServiceName(item.service);
-                const delayInfo = getDelayInfo(item.delai);
-                
-                return `
-                    <tr onclick="editRecord(${item.id})">
-                        <td>${formatDate(item.date_demande)}</td>
-                        <td><span class="status-badge status-${item.statut || 'particulier'}">${item.statut || '—'}</span></td>
-                        <td>${item.nom || '—'}</td>
-                        <td>${truncateText(item.sujet, 50)}</td>
-                        <td>${directionName}</td>
-                        <td>${serviceName}</td>
-                        <td>${delayInfo}</td>
-                        <td>${formatDate(item.date_reponse)}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
+  function getTypeLabel(r) {
+    if (r.Type && typeof r.Type === 'object') return r.Type.Name || r.Type.Nom || Object.values(r.Type)[0] || 'Type';
+    return r.Type || 'Sans type';
+  }
 
-        // Obtenir le nom de la direction
-        function getDirectionName(directionId) {
-            const direction = allDirections.find(d => d.id === directionId);
-            return direction ? direction.direction : '—';
-        }
+  function hasAttachments(r) {
+    return r['Pièce_jointe'] && r['Pièce_jointe'].length > 0
+      || r['Piece_jointe'] && r['Piece_jointe'].length > 0
+      || r.Attachments && r.Attachments.length > 0;
+  }
 
-        // Obtenir le nom du service
-        function getServiceName(serviceId) {
-            const service = allServices.find(s => s.id === serviceId);
-            return service ? service.service : '—';
-        }
+  function getAttachments(r) {
+    return r['Pièce_jointe'] || r['Piece_jointe'] || r.Attachments || [];
+  }
 
-        // Obtenir les infos du délai
-        function getDelayInfo(delai) {
-            if (!delai && delai !== 0) return '—';
-            
-            let badgeClass = 'delay-medium';
-            if (delai <= 3) badgeClass = 'delay-fast';
-            else if (delai > 7) badgeClass = 'delay-slow';
-            
-            return `<span class="delay-badge ${badgeClass}">${delai}j</span>`;
-        }
+  function hasCR(r) {
+    return r['Compte_rendu'] && r['Compte_rendu'].trim().length > 0
+      || r['Compte rendu'] && r['Compte rendu'].trim().length > 0;
+  }
 
-        // Formater une date
-        function formatDate(dateValue) {
-            if (!dateValue) return '—';
-            try {
-                const date = new Date(dateValue * 86400 * 1000); // Grist stocke les dates en jours depuis epoch
-                return date.toLocaleDateString('fr-FR');
-            } catch (e) {
-                return '—';
-            }
-        }
+  function getCR(r) {
+    return r['Compte_rendu'] || r['Compte rendu'] || '';
+  }
 
-        // Tronquer un texte
-        function truncateText(text, maxLength) {
-            if (!text) return '—';
-            if (text.length <= maxLength) return text;
-            return text.substring(0, maxLength) + '...';
-        }
+  /* ── FILTER & SORT ── */
+  function getFiltered() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    const order = document.getElementById('sortOrder').value;
 
-        // Mettre à jour les statistiques
-        function updateStats() {
-            document.getElementById('totalCount').textContent = currentData.length;
-            
-            const validDelays = currentData.filter(item => item.delai !== null && item.delai !== undefined).map(item => item.delai);
-            
-            if (validDelays.length > 0) {
-                const avgDelay = validDelays.reduce((a, b) => a + b, 0) / validDelays.length;
-                document.getElementById('avgDelay').textContent = Math.round(avgDelay) + 'j';
-            } else {
-                document.getElementById('avgDelay').textContent = '—';
-            }
-        }
+    let list = [...allRecords];
 
-        // Filtrer par statut
-        function filterByStatus(status) {
-            currentFilter = status;
-            
-            // Mise à jour des chips
-            document.querySelectorAll('.filter-chip').forEach(chip => {
-                chip.classList.remove('active');
-            });
-            document.querySelector(`[data-status="${status}"]`).classList.add('active');
-            
-            renderTable();
-        }
+    if (q) {
+      list = list.filter(r => {
+        const objet = (r.Objet || '').toLowerCase();
+        const type = getTypeLabel(r).toLowerCase();
+        const cr = getCR(r).toLowerCase();
+        return objet.includes(q) || type.includes(q) || cr.includes(q);
+      });
+    }
 
-        // Filtrer les données
-        function filterData() {
-            renderTable();
-        }
+    list.sort((a, b) => {
+      const da = a.Date || 0, db = b.Date || 0;
+      return order === 'desc' ? db - da : da - db;
+    });
 
-        // Ouvrir le modal
-        function openModal() {
-            // Vérifier que les directions sont chargées
-            if (allDirections.length === 0) {
-                alert('Chargement des données en cours... Veuillez patienter.');
-                return;
-            }
-            
-            editingRowId = null;
-            document.getElementById('modalTitle').textContent = 'Nouvelle Demande';
-            document.getElementById('deleteBtn').style.display = 'none';
-            document.getElementById('demandForm').reset();
-            document.getElementById('mail').value = '';
-            
-            // Repeupler les directions au cas où
-            populateDirectionSelect();
-            
-            // Date du jour par défaut
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('date_demande').value = today;
-            
-            document.getElementById('modalOverlay').classList.add('active');
-        }
+    return list;
+  }
 
-        // Éditer un enregistrement
-        async function editRecord(rowId) {
-            editingRowId = rowId;
-            const record = currentData.find(r => r.id === rowId);
-            
-            if (!record) {
-                console.error('Record not found:', rowId);
-                return;
-            }
-            
-            console.log('Editing record:', record);
-            
-            document.getElementById('modalTitle').textContent = 'Modifier la Demande';
-            document.getElementById('deleteBtn').style.display = 'inline-flex';
-            
-            // Remplir le formulaire
-            document.getElementById('date_demande').value = convertGristDateToInput(record.date_demande);
-            document.getElementById('statut').value = record.statut || '';
-            document.getElementById('nom').value = record.nom || '';
-            document.getElementById('sujet').value = record.sujet || '';
-            document.getElementById('date_charge').value = convertGristDateToInput(record.date_charge);
-            document.getElementById('date_reponse').value = convertGristDateToInput(record.date_reponse);
-            
-            // Sélectionner la direction
-            if (record.direction) {
-                document.getElementById('direction').value = record.direction;
-                // Charger les services pour cette direction
-                updateServices();
-                
-                // Petit délai pour s'assurer que les services sont chargés
-                setTimeout(() => {
-                    if (record.service) {
-                        document.getElementById('service').value = record.service;
-                        updateMail();
-                    }
-                }, 100);
-            }
-            
-            document.getElementById('modalOverlay').classList.add('active');
-        }
+  function groupRecords(list, groupBy) {
+    if (groupBy === 'none') return [{ key: null, label: null, items: list }];
+    const map = new Map();
+    list.forEach(r => {
+      let key;
+      if (groupBy === 'type') key = getTypeLabel(r);
+      else if (groupBy === 'month') key = getMonth(r.Date);
+      else if (groupBy === 'year') key = getYear(r.Date);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    });
+    return Array.from(map.entries()).map(([key, items]) => ({ key, label: key, items }));
+  }
 
-        // Convertir une date Grist en format input
-        function convertGristDateToInput(gristDate) {
-            if (!gristDate) return '';
-            try {
-                const date = new Date(gristDate * 86400 * 1000);
-                return date.toISOString().split('T')[0];
-            } catch (e) {
-                return '';
-            }
-        }
+  /* ── RENDER LIST ── */
+  function render() {
+    const filtered = getFiltered();
+    const groupBy = document.getElementById('groupBy').value;
+    const groups = groupRecords(filtered, groupBy);
 
-        // Convertir une date input en format Grist
-        function convertInputDateToGrist(inputDate) {
-            if (!inputDate) return null;
-            try {
-                const date = new Date(inputDate);
-                return Math.floor(date.getTime() / (86400 * 1000));
-            } catch (e) {
-                return null;
-            }
-        }
+    document.getElementById('countBadge').textContent = filtered.length;
 
-        // Sauvegarder un enregistrement
-        async function saveRecord() {
-            const form = document.getElementById('demandForm');
-            
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-            
-            const directionValue = document.getElementById('direction').value;
-            const serviceValue = document.getElementById('service').value;
-            
-            if (!directionValue || !serviceValue) {
-                alert('Veuillez sélectionner une direction et un service.');
-                return;
-            }
-            
-            const data = {
-                date_demande: convertInputDateToGrist(document.getElementById('date_demande').value),
-                statut: document.getElementById('statut').value || null,
-                nom: document.getElementById('nom').value || null,
-                sujet: document.getElementById('sujet').value || null,
-                date_charge: convertInputDateToGrist(document.getElementById('date_charge').value),
-                date_reponse: convertInputDateToGrist(document.getElementById('date_reponse').value),
-                direction: parseInt(directionValue),
-                service: parseInt(serviceValue)
-            };
-            
-            console.log('Saving data:', data);
-            
-            try {
-                if (editingRowId) {
-                    // Mise à jour
-                    await grist.docApi.applyUserActions([
-                        ['UpdateRecord', 'QUOTIDIEN', editingRowId, data]
-                    ]);
-                } else {
-                    // Création
-                    await grist.docApi.applyUserActions([
-                        ['AddRecord', 'QUOTIDIEN', null, data]
-                    ]);
-                }
-                
-                closeModal();
-                await refreshData();
-            } catch (error) {
-                console.error('Erreur lors de la sauvegarde:', error);
-                alert('Erreur lors de la sauvegarde: ' + error.message);
-            }
-        }
+    const panel = document.getElementById('listPanel');
 
-        // Supprimer un enregistrement
-        async function deleteRecord() {
-            if (!editingRowId) return;
-            
-            if (!confirm('Êtes-vous sûr de vouloir supprimer cette demande ?')) {
-                return;
-            }
-            
-            try {
-                await grist.docApi.applyUserActions([
-                    ['RemoveRecord', 'QUOTIDIEN', editingRowId]
-                ]);
-                
-                closeModal();
-                await refreshData();
-            } catch (error) {
-                console.error('Erreur lors de la suppression:', error);
-                alert('Erreur lors de la suppression. Veuillez réessayer.');
-            }
-        }
+    if (filtered.length === 0) {
+      panel.innerHTML = '<div class="no-results">Aucune réunion trouvée</div>';
+      return;
+    }
 
-        // Fermer le modal
-        function closeModal() {
-            document.getElementById('modalOverlay').classList.remove('active');
-            editingRowId = null;
-        }
+    let html = '';
 
-        // Fermer le modal en cliquant sur l'overlay
-        function closeModalOnOverlay(event) {
-            if (event.target.id === 'modalOverlay') {
-                closeModal();
-            }
-        }
+    groups.forEach(({ key, label, items }) => {
+      const collapsed = collapsedGroups.has(key);
 
-        // Actualiser les données
-        async function refreshData() {
-            showLoading(true);
-            await loadData();
-            await loadDirections();
-            await loadServices();
-            showLoading(false);
-            updateStats();
-        }
+      if (label !== null) {
+        html += `<div class="group-header" onclick="toggleGroup('${key?.replace(/'/g, "\\'")}')">
+          <span class="group-toggle ${collapsed ? 'collapsed' : ''}">▼</span>
+          <span class="group-name">${label}</span>
+          <span class="group-count">${items.length}</span>
+        </div>`;
+      }
 
-        // Afficher/masquer le loading
-        function showLoading(show) {
-            const loading = document.getElementById('loading');
-            const tableContainer = document.getElementById('tableContainer');
-            
-            if (show) {
-                loading.classList.add('active');
-                tableContainer.style.display = 'none';
-            } else {
-                loading.classList.remove('active');
-                tableContainer.style.display = 'block';
-            }
-        }
+      html += `<div class="group-items ${collapsed ? 'collapsed' : ''}">`;
 
-        // Trier le tableau
-        let sortDirection = {};
-        function sortTable(columnIndex) {
-            const table = document.getElementById('dataTable');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            
-            sortDirection[columnIndex] = !sortDirection[columnIndex];
-            const ascending = sortDirection[columnIndex];
-            
-            rows.sort((a, b) => {
-                const aText = a.cells[columnIndex].textContent.trim();
-                const bText = b.cells[columnIndex].textContent.trim();
-                
-                if (aText === '—' || aText === '') return 1;
-                if (bText === '—' || bText === '') return -1;
-                
-                return ascending ? aText.localeCompare(bText) : bText.localeCompare(aText);
-            });
-            
-            rows.forEach(row => tbody.appendChild(row));
-        }
+      items.forEach(r => {
+        const typeLabel = getTypeLabel(r);
+        const [bg, fg] = getTypeColor(typeLabel);
+        const active = r.id === selectedId ? 'active' : '';
+        const indicators = [];
+        if (hasCR(r)) indicators.push(`<span class="indicator has-cr">✦ CR</span>`);
+        const atts = getAttachments(r);
+        if (atts.length > 0) indicators.push(`<span class="indicator has-pdf">📎 ${atts.length} fichier${atts.length > 1 ? 's' : ''}</span>`);
 
-        // Initialiser au chargement
-        init();
-    </script>
+        html += `<div class="meeting-card ${active}" onclick="selectRecord(${r.id})">
+          <div class="card-top">
+            <div class="card-objet">${r.Objet || '(Sans objet)'}</div>
+          </div>
+          <div class="card-meta">
+            <span class="type-pill" style="background:${bg};color:${fg}">${typeLabel}</span>
+            <span class="card-date">${formatDateShort(r.Date)}</span>
+          </div>
+          ${indicators.length ? `<div class="card-indicators">${indicators.join('')}</div>` : ''}
+        </div>`;
+      });
+
+      html += '</div>';
+    });
+
+    panel.innerHTML = html;
+  }
+
+  function toggleGroup(key) {
+    if (collapsedGroups.has(key)) collapsedGroups.delete(key);
+    else collapsedGroups.add(key);
+    render();
+  }
+
+  /* ── SELECT RECORD ── */
+  function selectRecord(id) {
+    selectedId = id;
+    render();
+    renderDetail();
+    try { grist.setSelectedRows([id]); } catch(e) {}
+  }
+
+  /* ── RENDER DETAIL ── */
+  function renderDetail() {
+    const panel = document.getElementById('detailPanel');
+    const r = allRecords.find(x => x.id === selectedId);
+
+    if (!r) {
+      panel.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>Sélectionnez une réunion<br>pour afficher son détail</p>
+      </div>`;
+      return;
+    }
+
+    const typeLabel = getTypeLabel(r);
+    const [bg, fg] = getTypeColor(typeLabel);
+    const cr = getCR(r);
+    const attachments = getAttachments(r);
+
+    let html = `
+    <div class="detail-header">
+      <div class="detail-type-date">
+        <span class="detail-type-pill" style="background:${bg};color:${fg}">${typeLabel}</span>
+        <span class="detail-date">📅 ${formatDate(r.Date)}</span>
+      </div>
+      <div class="detail-objet">${r.Objet || '(Sans objet)'}</div>
+    </div>`;
+
+    if (cr && cr.trim()) {
+      html += `
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Compte rendu</span>
+          <div class="section-line"></div>
+        </div>
+        <div class="cr-box">${escapeHtml(cr)}</div>
+      </div>`;
+    }
+
+    if (attachments.length > 0) {
+      html += `
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Pièces jointes</span>
+          <div class="section-line"></div>
+        </div>
+        <div class="attachments-grid">`;
+
+      attachments.forEach((att, i) => {
+        const name = typeof att === 'string' ? att : (att.name || att.filename || `Fichier ${i + 1}`);
+        const isPdf = name.toLowerCase().endsWith('.pdf');
+        const icon = isPdf ? '📄' : '📎';
+        const size = att.size ? formatSize(att.size) : '';
+
+        html += `
+          <div class="attachment-item">
+            <div class="attachment-icon">${icon}</div>
+            <div class="attachment-info">
+              <div class="attachment-name">${name}</div>
+              ${size ? `<div class="attachment-size">${size}</div>` : ''}
+            </div>
+            <button class="btn-open" onclick="openAttachment(${r.id}, ${i}, '${name.replace(/'/g, "\\'")}')">
+              ${isPdf ? '▶ Ouvrir PDF' : '⬇ Télécharger'}
+            </button>
+          </div>`;
+      });
+
+      html += `</div></div>`;
+    }
+
+    if (!cr?.trim() && attachments.length === 0) {
+      html += `<div class="no-results" style="padding:40px 0;color:var(--text-muted);font-size:13px;">
+        Aucun compte rendu ni pièce jointe pour cette réunion.
+      </div>`;
+    }
+
+    panel.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' o';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' Ko';
+    return (bytes / 1048576).toFixed(1) + ' Mo';
+  }
+
+  async function openAttachment(rowId, attIndex, filename) {
+    try {
+      const token = await grist.docApi.getAccessToken({ readOnly: true });
+      const docId = await grist.getDocName();
+      const url = `${window.location.origin}/api/docs/${docId}/attachments/${rowId}/${attIndex}/download?auth=${token}`;
+      window.open(url, '_blank');
+    } catch (e) {
+      // Fallback: try Grist attachment API
+      try {
+        const atts = getAttachments(allRecords.find(r => r.id === rowId));
+        const att = atts[attIndex];
+        if (att && att.url) window.open(att.url, '_blank');
+        else alert('Impossible d\'ouvrir ce fichier. Vérifiez les permissions.');
+      } catch (e2) {
+        alert('Impossible d\'ouvrir ce fichier : ' + e2.message);
+      }
+    }
+  }
+</script>
 </body>
 </html>

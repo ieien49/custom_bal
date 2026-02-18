@@ -378,18 +378,50 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 20px 24px;
     font-size: 14px;
-    line-height: 1.75;
+    line-height: 1.8;
     color: var(--text-light);
-    white-space: pre-wrap;
     font-family: 'DM Sans', sans-serif;
-    max-height: 350px;
+    max-height: 420px;
     overflow-y: auto;
   }
 
   .cr-box::-webkit-scrollbar { width: 4px; }
   .cr-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Quill rendered content */
+  .cr-box h1 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--text); margin: 16px 0 8px; font-weight: 600; }
+  .cr-box h2 { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--text); margin: 14px 0 6px; font-weight: 600; }
+  .cr-box h3 { font-size: 15px; color: var(--accent2); margin: 12px 0 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .cr-box p { margin: 4px 0; }
+  .cr-box p:empty { height: 8px; }
+  .cr-box strong { color: var(--text); font-weight: 600; }
+  .cr-box em { font-style: italic; }
+  .cr-box u { text-decoration: underline; text-underline-offset: 3px; }
+  .cr-box s { text-decoration: line-through; color: var(--text-muted); }
+  .cr-box ul { margin: 6px 0 6px 20px; padding: 0; list-style: disc; }
+  .cr-box ol { margin: 6px 0 6px 20px; padding: 0; list-style: decimal; }
+  .cr-box li { margin: 3px 0; }
+  .cr-box ul ul, .cr-box ol ul { list-style: circle; margin-top: 2px; }
+  .cr-box blockquote {
+    border-left: 3px solid var(--accent);
+    margin: 10px 0;
+    padding: 4px 14px;
+    color: var(--text-muted);
+    font-style: italic;
+    background: rgba(201,168,76,0.06);
+    border-radius: 0 6px 6px 0;
+  }
+  .cr-box code {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--accent2);
+  }
 
   /* ── ATTACHMENTS ── */
   .attachments-grid {
@@ -769,7 +801,7 @@
           <span class="section-title">Compte rendu</span>
           <div class="section-line"></div>
         </div>
-        <div class="cr-box">${escapeHtml(cr)}</div>
+        <div class="cr-box">${deltaToHtml(cr)}</div>
       </div>`;
     }
 
@@ -814,7 +846,90 @@
   }
 
   function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ── QUILL DELTA → HTML ── */
+  function deltaToHtml(raw) {
+    let delta;
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try { delta = JSON.parse(trimmed); } catch(e) { return raw.split('\n').map(l => `<p>${escapeHtml(l)}</p>`).join(''); }
+      } else {
+        return raw.split('\n').map(l => `<p>${escapeHtml(l)}</p>`).join('');
+      }
+    } else { delta = raw; }
+
+    const ops = delta.ops || (Array.isArray(delta) ? delta : []);
+    if (!ops.length) return '';
+
+    const lines = [];
+    let currentLine = { segments: [], lineAttrs: {} };
+
+    ops.forEach(op => {
+      if (typeof op.insert !== 'string') return;
+      const parts = op.insert.split('\n');
+      parts.forEach((part, i) => {
+        if (part.length > 0) currentLine.segments.push({ text: part, attrs: op.attributes || {} });
+        if (i < parts.length - 1) {
+          currentLine.lineAttrs = op.attributes || {};
+          lines.push(currentLine);
+          currentLine = { segments: [], lineAttrs: {} };
+        }
+      });
+    });
+    if (currentLine.segments.length > 0) lines.push(currentLine);
+
+    let html = '';
+    let listStack = [];
+
+    function closeLists() {
+      while (listStack.length > 0) { const t = listStack.pop(); html += t === 'bullet' ? '</ul>' : '</ol>'; }
+    }
+
+    function renderSegments(segs) {
+      return segs.map(({ text, attrs }) => {
+        let s = escapeHtml(text);
+        if (!s) return '';
+        if (attrs.bold) s = `<strong>${s}</strong>`;
+        if (attrs.italic) s = `<em>${s}</em>`;
+        if (attrs.underline) s = `<u>${s}</u>`;
+        if (attrs.strike) s = `<s>${s}</s>`;
+        if (attrs.code) s = `<code>${s}</code>`;
+        if (attrs.link) s = `<a href="${escapeHtml(attrs.link)}" target="_blank" style="color:var(--accent2)">${s}</a>`;
+        return s;
+      }).join('');
+    }
+
+    lines.forEach(({ segments, lineAttrs }) => {
+      const content = renderSegments(segments);
+      const listType = lineAttrs.list;
+      const indent = lineAttrs.indent || 0;
+      const header = lineAttrs.header;
+      const blockquote = lineAttrs.blockquote;
+
+      if (listType) {
+        const type = listType === 'ordered' ? 'ordered' : 'bullet';
+        const tag = type === 'ordered' ? 'ol' : 'ul';
+        if (listStack.length === 0 || listStack[listStack.length-1] !== type) {
+          if (listStack.length > 0 && listStack[listStack.length-1] !== type) {
+            const prev = listStack.pop(); html += prev === 'bullet' ? '</ul>' : '</ol>';
+          }
+          html += `<${tag}>`; listStack.push(type);
+        }
+        html += `<li>${content}</li>`;
+      } else {
+        closeLists();
+        if (header) html += `<h${header}>${content}</h${header}>`;
+        else if (blockquote) html += `<blockquote>${content}</blockquote>`;
+        else html += `<p>${content}</p>`;
+      }
+    });
+
+    closeLists();
+    return html;
   }
 
   function formatSize(bytes) {
